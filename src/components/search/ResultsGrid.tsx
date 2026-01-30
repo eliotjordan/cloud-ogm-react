@@ -51,6 +51,12 @@ export function ResultsGrid({ results }: ResultsGridProps) {
                 {result.provider && (
                   <span className="font-medium">{result.provider}</span>
                 )}
+                {result.access_rights && (
+                  <>
+                    <span>•</span>
+                    <span>{result.access_rights}</span>
+                  </>
+                )}
                 {result.format && (
                   <>
                     <span>•</span>
