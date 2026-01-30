@@ -1,9 +1,9 @@
-import type { SearchParams, FacetConfig } from '@/types';
+import type { SearchParams, FieldConfig } from '@/types';
 import { clearFilters, updateSearchParams } from '@/lib/router';
 
 interface ActiveFiltersProps {
   query: SearchParams;
-  facetsConfig: FacetConfig[];
+  facetsConfig: FieldConfig[];
 }
 
 /**

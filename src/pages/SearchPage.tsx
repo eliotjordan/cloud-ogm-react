@@ -8,8 +8,10 @@ import { ActiveFilters } from '@/components/search/ActiveFilters';
 import { ResultsGrid } from '@/components/search/ResultsGrid';
 import { Pagination } from '@/components/search/Pagination';
 import { buildSearchQuery, buildFacetQuery } from '@/lib/queries';
-import { facetsConfig } from '@/lib/facetsConfig';
+import { getFacetableFields } from '@/lib/fieldsConfig';
 import { calculatePagination } from '@/utils/pagination';
+
+const facetsConfig = getFacetableFields();
 
 interface SearchPageProps {
   conn: AsyncDuckDBConnection;

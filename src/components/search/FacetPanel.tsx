@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import type { FacetConfig, FacetValue } from '@/types';
+import type { FieldConfig, FacetValue } from '@/types';
 import { toggleFilter } from '@/lib/router';
 
 interface FacetPanelProps {
-  config: FacetConfig;
+  config: FieldConfig;
   values: FacetValue[];
   selectedValues: string[];
 }

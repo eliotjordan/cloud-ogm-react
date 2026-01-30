@@ -1,4 +1,4 @@
-import type { SearchParams, FacetConfig } from '@/types';
+import type { SearchParams, FieldConfig } from '@/types';
 import { parseBbox, bboxToWkt, isValidBbox } from '@/utils/spatial';
 import { escapeSqlString } from '@/utils/format';
 import { getPaginationSql } from '@/utils/pagination';
@@ -82,7 +82,7 @@ export function buildSearchQuery(
  * Build SQL query for facet aggregation
  */
 export function buildFacetQuery(
-  facetConfig: FacetConfig,
+  facetConfig: FieldConfig,
   params: SearchParams
 ): string {
   const whereClauses: string[] = [];

@@ -48,7 +48,20 @@ export interface DownloadLink {
 }
 
 /**
- * Facet configuration for search filters
+ * Field configuration for metadata
+ */
+export interface FieldConfig {
+  field: keyof MetadataRecord;
+  label: string;
+  isArray: boolean;
+  facetable: boolean;
+  displayOnCard: boolean;
+  displayOnItem: boolean;
+}
+
+/**
+ * @deprecated Use FieldConfig instead
+ * Facet configuration for search filters (legacy)
  */
 export interface FacetConfig {
   field: keyof MetadataRecord;
