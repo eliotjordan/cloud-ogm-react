@@ -28,7 +28,7 @@ export function buildSearchQuery(
     if (bbox && isValidBbox(bbox)) {
       const wkt = bboxToWkt(bbox);
       whereClauses.push(
-        `ST_Intersects(ST_GeomFromWKB(geometry), ST_GeomFromText('${wkt}'))`
+        `ST_Within('${wkt}'::GEOMETRY, geometry)`
       );
     }
   }
@@ -100,7 +100,7 @@ export function buildFacetQuery(
     if (bbox && isValidBbox(bbox)) {
       const wkt = bboxToWkt(bbox);
       whereClauses.push(
-        `ST_Intersects(ST_GeomFromWKB(geometry), ST_GeomFromText('${wkt}'))`
+        `ST_Within('${wkt}'::GEOMETRY, geometry)`
       );
     }
   }
