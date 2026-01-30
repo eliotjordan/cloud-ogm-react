@@ -19,6 +19,7 @@ export function SearchMap({ results, query }: SearchMapProps) {
   const [showSearchHere, setShowSearchHere] = useState(false);
   const userMovedMap = useRef(false);
   const bboxRectRef = useRef<L.Rectangle | null>(null);
+  const previewRectRef = useRef<L.Rectangle | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
 
   // Initialize map
@@ -40,6 +41,8 @@ export function SearchMap({ results, query }: SearchMapProps) {
     map.on('moveend', () => {
       if (userMovedMap.current) {
         setShowSearchHere(true);
+        // Show preview rectangle
+        updatePreviewRectangle(map);
       }
     });
 
@@ -51,7 +54,28 @@ export function SearchMap({ results, query }: SearchMapProps) {
     };
   }, []);
 
-  // Update bbox rectangle
+  // Helper function to update preview rectangle
+  function updatePreviewRectangle(map: L.Map) {
+    // Remove existing preview
+    if (previewRectRef.current) {
+      map.removeLayer(previewRectRef.current);
+      previewRectRef.current = null;
+    }
+
+    // Add new preview showing current viewport
+    const bounds = map.getBounds();
+    const rectangle = L.rectangle(bounds, {
+      color: '#3b82f6',
+      fillColor: '#3b82f6',
+      fillOpacity: 0.05,
+      weight: 2,
+      dashArray: '5, 10',
+    }).addTo(map);
+
+    previewRectRef.current = rectangle;
+  }
+
+  // Update bbox rectangle (committed search area)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -141,13 +165,17 @@ export function SearchMap({ results, query }: SearchMapProps) {
       west: bounds.getWest(),
     };
 
-    updateSearchParams({ bbox: formatBboxParam(bbox), page: 1 });
-    userMovedMap.current = false;
-    setShowSearchHere(false);
-  }
+    // Remove preview rectangle
+    if (previewRectRef.current) {
+      map.removeLayer(previewRectRef.current);
+      previewRectRef.current = null;
+    }
 
-  function handleClearBbox() {
-    updateSearchParams({ bbox: undefined, page: 1 });
+    // Zoom out one level
+    const currentZoom = map.getZoom();
+    map.setZoom(currentZoom - 1);
+
+    updateSearchParams({ bbox: formatBboxParam(bbox), page: 1 });
     userMovedMap.current = false;
     setShowSearchHere(false);
   }
@@ -158,26 +186,13 @@ export function SearchMap({ results, query }: SearchMapProps) {
 
       {/* Search Here Button */}
       {showSearchHere && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000]">
+        <div className="absolute top-4 right-4 z-[1000]">
           <button
             onClick={handleSearchHere}
             className="btn-primary shadow-lg"
             aria-label="Search this area"
           >
             Search Here
-          </button>
-        </div>
-      )}
-
-      {/* Clear Bbox Button */}
-      {query.bbox && (
-        <div className="absolute top-4 right-4 z-[1000]">
-          <button
-            onClick={handleClearBbox}
-            className="btn-secondary shadow-lg"
-            aria-label="Clear geographic filter"
-          >
-            Clear Bbox
           </button>
         </div>
       )}
