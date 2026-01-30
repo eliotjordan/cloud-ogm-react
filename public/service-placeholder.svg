@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <rect width="200" height="200" fill="#f0f9ff"/>
+  <circle cx="100" cy="100" r="50" fill="none" stroke="#0ea5e9" stroke-width="2"/>
+  <circle cx="100" cy="100" r="5" fill="#0ea5e9"/>
+  <line x1="100" y1="100" x2="100" y2="50" stroke="#0ea5e9" stroke-width="2"/>
+  <line x1="100" y1="100" x2="135" y2="75" stroke="#0ea5e9" stroke-width="2"/>
+  <line x1="100" y1="100" x2="135" y2="125" stroke="#0ea5e9" stroke-width="2"/>
+  <line x1="100" y1="100" x2="65" y2="75" stroke="#0ea5e9" stroke-width="2"/>
+  <line x1="100" y1="100" x2="65" y2="125" stroke="#0ea5e9" stroke-width="2"/>
+  <text x="100" y="185" font-family="Arial" font-size="14" fill="#0ea5e9" text-anchor="middle">Web Service</text>
+</svg>

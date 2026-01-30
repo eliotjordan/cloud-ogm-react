@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <rect width="200" height="200" fill="#fef3c7"/>
+  <rect x="30" y="40" width="140" height="110" fill="#fde68a" stroke="#f59e0b" stroke-width="2"/>
+  <circle cx="70" cy="80" r="15" fill="#fbbf24"/>
+  <polygon points="30,150 70,110 110,130 150,90 170,110 170,150" fill="#f59e0b"/>
+  <text x="100" y="185" font-family="Arial" font-size="14" fill="#f59e0b" text-anchor="middle">Imagery</text>
+</svg>
