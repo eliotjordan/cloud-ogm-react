@@ -54,7 +54,8 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
         // Get total count
         const countSql = buildSearchQuery(query, currentPage, true);
         const countResult = await conn.query(countSql);
-        const total = countResult.getChildAt(0)?.get(0) as number;
+        const totalRaw = countResult.getChildAt(0)?.get(0);
+        const total = typeof totalRaw === 'bigint' ? Number(totalRaw) : totalRaw as number;
 
         // Execute facet queries in parallel
         const facetPromises = facetsConfig.map(async (facetConfig) => {
@@ -63,9 +64,10 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
 
           const values: FacetValue[] = [];
           for (let i = 0; i < facetResult.numRows; i++) {
+            const countRaw = facetResult.getChildAt(1)?.get(i);
             values.push({
               value: facetResult.getChildAt(0)?.get(i) as string,
-              count: facetResult.getChildAt(1)?.get(i) as number,
+              count: typeof countRaw === 'bigint' ? Number(countRaw) : countRaw as number,
             });
           }
 

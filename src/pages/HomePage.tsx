@@ -37,9 +37,10 @@ export function HomePage({ conn, onQueryTime }: HomePageProps) {
 
         const classes: ResourceClassInfo[] = [];
         for (let i = 0; i < result.numRows; i++) {
+          const countRaw = result.getChildAt(1)?.get(i);
           classes.push({
             name: result.getChildAt(0)?.get(i) as string,
-            count: result.getChildAt(1)?.get(i) as number,
+            count: typeof countRaw === 'bigint' ? Number(countRaw) : countRaw as number,
             icon: getResourceClassIcon(result.getChildAt(0)?.get(i) as string),
           });
         }
