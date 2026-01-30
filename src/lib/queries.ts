@@ -54,7 +54,7 @@ export function buildSearchQuery(
   // Geographic filter
   if (hasBbox) {
     whereClauses.push(
-      `ST_Within('${polygon}'::GEOMETRY, geometry)`
+      `ST_Within(geometry, '${polygon}'::GEOMETRY)`
     );
   }
 
@@ -107,7 +107,7 @@ export function buildSearchQuery(
     SELECT ${selectClause}
     FROM parquet_data
     ${whereClause}
-    ORDER BY ${hasBbox ? 'ratio ASC,' : ''} provider ASC, title ASC
+    ORDER BY ${hasBbox ? 'ratio ASC' : ''}
     LIMIT ${limit} OFFSET ${offset}
   `;
 }
@@ -134,7 +134,7 @@ export function buildFacetQuery(
     if (bbox && isValidBbox(bbox)) {
       const wkt = bboxToWkt(bbox);
       whereClauses.push(
-        `ST_Within('${wkt}'::GEOMETRY, geometry)`
+        `ST_Within(geometry, '${wkt}'::GEOMETRY)`
       );
     }
   }

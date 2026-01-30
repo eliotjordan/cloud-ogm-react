@@ -5,7 +5,7 @@
 export const PARQUET_URL =
   'https://pul-tile-images.s3.us-east-1.amazonaws.com/cloud.parquet';
 
-export const PAGE_SIZE = 25;
+export const PAGE_SIZE = 10;
 
 export const NOMINATIM_API_URL = 'https://nominatim.openstreetmap.org/search';
 
