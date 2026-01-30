@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
-import type { MetadataRecord, ParsedReferences } from '@/types';
+import type { MetadataRecord } from '@/types';
 import { parseReferences, hasViewers } from '@/utils/references';
-import { formatValue } from '@/utils/format';
 import { IIIFViewer } from '@/components/viewers/IIIFViewer';
 import { WMSViewer } from '@/components/viewers/WMSViewer';
 import { COGViewer } from '@/components/viewers/COGViewer';

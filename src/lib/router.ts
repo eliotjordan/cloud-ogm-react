@@ -69,12 +69,13 @@ export function buildSearchUrl(params: SearchParams): string {
  */
 export function updateSearchParams(newParams: Partial<SearchParams>): void {
   const current = parseHash();
-  const updated = { ...current.query, ...newParams };
+  const updated: SearchParams = { ...current.query, ...newParams };
 
   // Remove undefined/null values
   Object.keys(updated).forEach((key) => {
-    if (updated[key] === undefined || updated[key] === null) {
-      delete updated[key];
+    const typedKey = key as keyof SearchParams;
+    if (updated[typedKey] === undefined || updated[typedKey] === null) {
+      delete updated[typedKey];
     }
   });
 
@@ -104,12 +105,12 @@ export function toggleFilter(
     newValues = [...currentValues, value];
   }
 
-  const updated = { ...current.query, page: 1 }; // Reset to page 1
+  const updated: SearchParams = { ...current.query, page: 1 }; // Reset to page 1
 
   if (newValues.length > 0) {
-    updated[field] = newValues.join(',');
+    updated[field as keyof SearchParams] = newValues.join(',') as any;
   } else {
-    delete updated[field];
+    delete updated[field as keyof SearchParams];
   }
 
   const url = buildSearchUrl(updated);

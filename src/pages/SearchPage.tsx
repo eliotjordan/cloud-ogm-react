@@ -10,7 +10,6 @@ import { Pagination } from '@/components/search/Pagination';
 import { buildSearchQuery, buildFacetQuery } from '@/lib/queries';
 import { facetsConfig } from '@/lib/facetsConfig';
 import { calculatePagination } from '@/utils/pagination';
-import { PAGE_SIZE } from '@/lib/constants';
 
 interface SearchPageProps {
   conn: AsyncDuckDBConnection;

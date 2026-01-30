@@ -4,7 +4,6 @@ import { buildSearchUrl, navigate } from '@/lib/router';
 import { LocationSearch } from '@/components/LocationSearch';
 import { ResourceClassGrid } from '@/components/ResourceClassGrid';
 import type { ResourceClassInfo } from '@/types';
-import { formatNumber } from '@/utils/format';
 
 interface HomePageProps {
   conn: AsyncDuckDBConnection;

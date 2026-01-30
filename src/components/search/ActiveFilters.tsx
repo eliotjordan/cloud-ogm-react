@@ -16,7 +16,7 @@ export function ActiveFilters({ query, facetsConfig }: ActiveFiltersProps) {
   facetsConfig.forEach((config) => {
     const value = query[config.field];
     if (value) {
-      const values = typeof value === 'string' ? value.split(',') : [value];
+      const values = typeof value === 'string' ? value.split(',') : [String(value)];
       values.forEach((v) => {
         activeFilters.push({
           field: config.field,
