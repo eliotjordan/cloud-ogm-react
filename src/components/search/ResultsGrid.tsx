@@ -43,9 +43,15 @@ export function ResultsGrid({ results }: ResultsGridProps) {
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-1">
                 {result.title}
               </h3>
+
+              {result.description && result.description.length > 0 && (
+                <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1 mb-2">
+                  {formatValue(result.description, true)}
+                </p>
+              )}
 
               <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
                 {result.provider && (
