@@ -3,6 +3,27 @@ import { parseBbox, bboxToWkt, isValidBbox } from '@/utils/spatial';
 import { escapeSqlString } from '@/utils/format';
 import { getPaginationSql } from '@/utils/pagination';
 import { MAX_FACET_VALUES } from '@/lib/constants';
+import { getFacetableFields, getCardFields } from '@/lib/fieldsConfig';
+
+/**
+ * Get list of fields needed for search queries
+ * Combines facetable fields, card display fields, and essential fields
+ */
+function getSearchFields(): string[] {
+  const facetableFields = getFacetableFields().map(f => f.field);
+  const cardFields = getCardFields().map(f => f.field);
+
+  // Combine and deduplicate
+  const allFields = new Set([
+    'id',
+    'geometry',
+    'geojson',
+    ...facetableFields,
+    ...cardFields,
+  ]);
+
+  return Array.from(allFields);
+}
 
 /**
  * Build SQL query for searching metadata records
@@ -14,6 +35,14 @@ export function buildSearchQuery(
 ): string {
   const whereClauses: string[] = [];
 
+  // Check if we have a bbox for ratio calculation
+  const bbox = params.bbox ? parseBbox(params.bbox) : null;
+  const hasBbox = !!(bbox && isValidBbox(bbox));
+  let polygon = '';
+  if (hasBbox && bbox) {
+    polygon = bboxToWkt(bbox);
+  }
+
   // Text search
   if (params.q) {
     const escaped = escapeSqlString(params.q);
@@ -23,14 +52,10 @@ export function buildSearchQuery(
   }
 
   // Geographic filter
-  if (params.bbox) {
-    const bbox = parseBbox(params.bbox);
-    if (bbox && isValidBbox(bbox)) {
-      const wkt = bboxToWkt(bbox);
-      whereClauses.push(
-        `ST_Within('${wkt}'::GEOMETRY, geometry)`
-      );
-    }
+  if (hasBbox) {
+    whereClauses.push(
+      `ST_Within('${polygon}'::GEOMETRY, geometry)`
+    );
   }
 
   // Facet filters
@@ -68,12 +93,21 @@ export function buildSearchQuery(
     return `SELECT COUNT(*) FROM parquet_data ${whereClause}`;
   }
 
+  // Build SELECT clause with specific fields
+  const searchFields = getSearchFields();
+  let selectClause = searchFields.join(', ');
+
+  // Add ratio calculation if bbox exists
+  if (hasBbox) {
+    selectClause += `, ST_Area(geometry) / ST_Area(ST_Intersection(geometry, '${polygon}'::GEOMETRY)) as ratio`;
+  }
+
   const { limit, offset } = getPaginationSql(page);
   return `
-    SELECT *
+    SELECT ${selectClause}
     FROM parquet_data
     ${whereClause}
-    ORDER BY provider ASC, title ASC
+    ORDER BY ${hasBbox ? 'ratio ASC,' : ''} provider ASC, title ASC
     LIMIT ${limit} OFFSET ${offset}
   `;
 }
