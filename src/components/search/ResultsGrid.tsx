@@ -1,6 +1,7 @@
 import type { MetadataRecord } from '@/types';
 import { navigate } from '@/lib/router';
-import { formatValue, getThumbnailPlaceholder } from '@/utils/format';
+import { formatValue } from '@/utils/format';
+import { getResourceClassIcon } from '@/utils/icons';
 
 interface ResultsGridProps {
   results: MetadataRecord[];
@@ -24,21 +25,36 @@ export function ResultsGrid({ results }: ResultsGridProps) {
           aria-label={`View details for ${result.title}`}
         >
           <div className="flex gap-4">
-            {/* Thumbnail */}
+            {/* Thumbnail or Icon */}
             <div className="flex-shrink-0">
-              <img
-                src={
-                  result.thumbnail ||
-                  getThumbnailPlaceholder(result.resource_class)
-                }
-                alt=""
-                className="w-24 h-24 object-cover rounded border border-gray-200 dark:border-gray-700"
-                onError={(e) => {
-                  e.currentTarget.src = getThumbnailPlaceholder(
-                    result.resource_class
-                  );
-                }}
-              />
+              {result.thumbnail ? (
+                <img
+                  src={result.thumbnail}
+                  alt=""
+                  className="w-24 h-24 object-cover rounded border border-gray-200 dark:border-gray-700"
+                  onError={(e) => {
+                    // Hide broken image and show icon instead
+                    e.currentTarget.style.display = 'none';
+                    const iconContainer = e.currentTarget.nextElementSibling;
+                    if (iconContainer instanceof HTMLElement) {
+                      iconContainer.style.display = 'flex';
+                    }
+                  }}
+                />
+              ) : null}
+              <div
+                className={`w-24 h-24 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center ${result.thumbnail ? 'hidden' : 'flex'}`}
+              >
+                <svg
+                  className="w-12 h-12 text-primary-600 dark:text-primary-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  {getResourceClassIcon(result.resource_class)}
+                </svg>
+              </div>
             </div>
 
             {/* Content */}
