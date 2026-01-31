@@ -9,9 +9,9 @@ export const PAGE_SIZE = 10;
 
 export const NOMINATIM_API_URL = 'https://nominatim.openstreetmap.org/search';
 
-export const DEBOUNCE_DELAY = 500;
+export const DEBOUNCE_DELAY = 250;
 
-export const MAX_FACET_VALUES = 30;
+export const MAX_FACET_VALUES = 20;
 
 export const MAX_AUTOCOMPLETE_RESULTS = 10;
 

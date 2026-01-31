@@ -54,7 +54,7 @@ export function buildSearchQuery(
   // Geographic filter
   if (hasBbox) {
     whereClauses.push(
-      `ST_Within(geometry, '${polygon}'::GEOMETRY)`
+      `ST_Intersects(geometry, '${polygon}'::GEOMETRY)`
     );
   }
 
@@ -134,7 +134,7 @@ export function buildFacetQuery(
     if (bbox && isValidBbox(bbox)) {
       const wkt = bboxToWkt(bbox);
       whereClauses.push(
-        `ST_Within(geometry, '${wkt}'::GEOMETRY)`
+        `ST_Intersects(geometry, '${wkt}'::GEOMETRY)`
       );
     }
   }
@@ -178,7 +178,7 @@ export function buildFacetQuery(
       CROSS JOIN UNNEST(${facetConfig.field}) as t(unnested_value)
       ${whereClause}
       GROUP BY unnested_value
-      ORDER BY count DESC, unnested_value ASC
+      ORDER BY count DESC
       LIMIT ${MAX_FACET_VALUES}
     `;
   } else {
