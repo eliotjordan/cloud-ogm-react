@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
 /**
  * Individual query record
@@ -31,7 +31,7 @@ const QueryHistoryContext = createContext<QueryHistoryContextType | undefined>(
 export function QueryHistoryProvider({ children }: { children: ReactNode }) {
   const [queries, setQueries] = useState<QueryRecord[]>([]);
 
-  const addQuery = (label: string, sql: string, duration: number) => {
+  const addQuery = useCallback((label: string, sql: string, duration: number) => {
     const query: QueryRecord = {
       id: `${Date.now()}-${Math.random()}`,
       label,
@@ -40,11 +40,11 @@ export function QueryHistoryProvider({ children }: { children: ReactNode }) {
       timestamp: Date.now(),
     };
     setQueries((prev) => [...prev, query]);
-  };
+  }, []);
 
-  const clearQueries = () => {
+  const clearQueries = useCallback(() => {
     setQueries([]);
-  };
+  }, []);
 
   const totalTime = queries.reduce((sum, q) => sum + q.duration, 0);
 
