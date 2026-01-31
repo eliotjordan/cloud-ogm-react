@@ -189,8 +189,8 @@ export function SearchMap({ results, query }: SearchMapProps) {
   }
 
   return (
-    <div className="relative">
-      <div ref={mapContainerRef} className="h-96 rounded-lg shadow-lg" />
+    <div className="relative z-0">
+      <div ref={mapContainerRef} className="h-96 rounded-lg shadow-lg z-0" />
 
       {/* Search Here Button */}
       {showSearchHere && (
