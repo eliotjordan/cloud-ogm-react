@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, fireEvent, waitFor } from '@testing-library/react';
 import { FacetPanel } from '@/components/search/FacetPanel';
 import type { FieldConfig, FacetValue } from '@/types';
 
@@ -26,7 +26,13 @@ describe('Accessibility - Heading Hierarchy', () => {
 
     it('should use h2 for facet panel heading', () => {
       const { container } = render(
-        <FacetPanel config={mockConfig} values={mockValues} selectedValues={[]} />
+        <FacetPanel
+          config={mockConfig}
+          values={mockValues}
+          selectedValues={[]}
+          isExpanded={false}
+          onToggle={() => {}}
+        />
       );
 
       const heading = container.querySelector('h2');
@@ -36,7 +42,13 @@ describe('Accessibility - Heading Hierarchy', () => {
 
     it('should not use h3 for main facet heading', () => {
       const { container } = render(
-        <FacetPanel config={mockConfig} values={mockValues} selectedValues={[]} />
+        <FacetPanel
+          config={mockConfig}
+          values={mockValues}
+          selectedValues={[]}
+          isExpanded={false}
+          onToggle={() => {}}
+        />
       );
 
       // The main heading should be h2, not h3
@@ -46,7 +58,13 @@ describe('Accessibility - Heading Hierarchy', () => {
 
     it('should have proper ARIA attributes for collapsible panel', () => {
       const { container } = render(
-        <FacetPanel config={mockConfig} values={mockValues} selectedValues={[]} />
+        <FacetPanel
+          config={mockConfig}
+          values={mockValues}
+          selectedValues={[]}
+          isExpanded={false}
+          onToggle={() => {}}
+        />
       );
 
       const button = container.querySelector('button[aria-expanded]');
@@ -73,9 +91,15 @@ describe('Accessibility - Form Controls', () => {
     ];
 
     it('should associate labels with checkboxes', () => {
-      // Start with selected value so panel is expanded
+      // Start with panel expanded to show checkboxes
       const { container } = render(
-        <FacetPanel config={mockConfig} values={mockValues} selectedValues={['Paris']} />
+        <FacetPanel
+          config={mockConfig}
+          values={mockValues}
+          selectedValues={['Paris']}
+          isExpanded={true}
+          onToggle={() => {}}
+        />
       );
 
       const labels = container.querySelectorAll('label');
@@ -88,9 +112,15 @@ describe('Accessibility - Form Controls', () => {
     });
 
     it('should have accessible checkboxes with proper attributes', () => {
-      // Start with selected value so panel is expanded
+      // Start with panel expanded to show checkboxes
       const { container } = render(
-        <FacetPanel config={mockConfig} values={mockValues} selectedValues={['Paris']} />
+        <FacetPanel
+          config={mockConfig}
+          values={mockValues}
+          selectedValues={['Paris']}
+          isExpanded={true}
+          onToggle={() => {}}
+        />
       );
 
       const checkboxes = container.querySelectorAll('input[type="checkbox"]');
@@ -108,6 +138,8 @@ describe('Accessibility - Form Controls', () => {
           config={mockConfig}
           values={mockValues}
           selectedValues={['Paris']}
+          isExpanded={true}
+          onToggle={() => {}}
         />
       );
 
@@ -136,36 +168,53 @@ describe('Accessibility - Modal Dialogs', () => {
       count: 100 - i,
     }));
 
-    it('should have proper ARIA attributes for modal', () => {
+    it('should have proper ARIA attributes for modal', async () => {
       const { container } = render(
-        <FacetPanel config={mockConfig} values={manyValues} selectedValues={[]} />
+        <FacetPanel
+          config={mockConfig}
+          values={manyValues}
+          selectedValues={[]}
+          isExpanded={true}
+          onToggle={() => {}}
+        />
       );
 
       // Click "Show more" button
       const showMoreButton = container.querySelector('button:not([aria-expanded])');
       if (showMoreButton) {
-        (showMoreButton as HTMLButtonElement).click();
+        fireEvent.click(showMoreButton);
 
-        // Check modal attributes
-        const modal = container.querySelector('[role="dialog"]');
-        expect(modal).toBeTruthy();
-        expect(modal?.getAttribute('aria-modal')).toBe('true');
-        expect(modal?.getAttribute('aria-labelledby')).toBe('facet-modal-title');
+        // Wait for modal to appear
+        await waitFor(() => {
+          const modal = container.querySelector('[role="dialog"]');
+          expect(modal).toBeTruthy();
+          expect(modal?.getAttribute('aria-modal')).toBe('true');
+          expect(modal?.getAttribute('aria-labelledby')).toBe('facet-modal-title');
+        });
       }
     });
 
-    it('should have close button with accessible label', () => {
+    it('should have close button with accessible label', async () => {
       const { container } = render(
-        <FacetPanel config={mockConfig} values={manyValues} selectedValues={[]} />
+        <FacetPanel
+          config={mockConfig}
+          values={manyValues}
+          selectedValues={[]}
+          isExpanded={true}
+          onToggle={() => {}}
+        />
       );
 
       // Click "Show more" button
       const showMoreButton = container.querySelector('button:not([aria-expanded])');
       if (showMoreButton) {
-        (showMoreButton as HTMLButtonElement).click();
+        fireEvent.click(showMoreButton);
 
-        const closeButton = container.querySelector('[aria-label="Close modal"]');
-        expect(closeButton).toBeTruthy();
+        // Wait for modal to appear
+        await waitFor(() => {
+          const closeButton = container.querySelector('[aria-label="Close modal"]');
+          expect(closeButton).toBeTruthy();
+        });
       }
     });
   });
@@ -188,7 +237,13 @@ describe('Accessibility - Focus Management', () => {
     ];
 
     const { container } = render(
-      <FacetPanel config={mockConfig} values={mockValues} selectedValues={[]} />
+      <FacetPanel
+        config={mockConfig}
+        values={mockValues}
+        selectedValues={[]}
+        isExpanded={true}
+        onToggle={() => {}}
+      />
     );
 
     // Check that buttons and inputs have focus ring classes
@@ -218,7 +273,13 @@ describe('Accessibility - Semantic HTML Best Practices', () => {
     ];
 
     const { container } = render(
-      <FacetPanel config={mockConfig} values={mockValues} selectedValues={[]} />
+      <FacetPanel
+        config={mockConfig}
+        values={mockValues}
+        selectedValues={[]}
+        isExpanded={false}
+        onToggle={() => {}}
+      />
     );
 
     // Should use button element, not div with onClick
@@ -240,9 +301,15 @@ describe('Accessibility - Semantic HTML Best Practices', () => {
       { value: 'Stanford', count: 100 },
     ];
 
-    // Start with selected value so panel is expanded
+    // Start with panel expanded to show labels
     const { container } = render(
-      <FacetPanel config={mockConfig} values={mockValues} selectedValues={['Stanford']} />
+      <FacetPanel
+        config={mockConfig}
+        values={mockValues}
+        selectedValues={['Stanford']}
+        isExpanded={true}
+        onToggle={() => {}}
+      />
     );
 
     const labels = container.querySelectorAll('label');
@@ -271,9 +338,15 @@ describe('Accessibility - Color and Contrast', () => {
       { value: 'Environment', count: 500 },
     ];
 
-    // Start with selected value so panel is expanded and we can check dark mode classes on content
+    // Start with panel expanded to check dark mode classes on content
     const { container } = render(
-      <FacetPanel config={mockConfig} values={mockValues} selectedValues={['Environment']} />
+      <FacetPanel
+        config={mockConfig}
+        values={mockValues}
+        selectedValues={['Environment']}
+        isExpanded={true}
+        onToggle={() => {}}
+      />
     );
 
     // Check for dark mode classes

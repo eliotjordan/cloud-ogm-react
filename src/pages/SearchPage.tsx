@@ -27,11 +27,23 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
   const [results, setResults] = useState<MetadataRecord[]>([]);
   const [totalResults, setTotalResults] = useState(0);
   const [facets, setFacets] = useState<Record<string, FacetValue[]>>({});
+  const [expandedFacets, setExpandedFacets] = useState<Record<string, boolean>>({});
+  const [loadedFacets, setLoadedFacets] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
   const { addQuery, clearQueries } = useQueryHistory();
 
   const currentPage = query.page || 1;
   const pagination = calculatePagination(currentPage, totalResults);
+
+  // Initialize expanded state based on selected values
+  useEffect(() => {
+    const initialExpanded: Record<string, boolean> = {};
+    facetsConfig.forEach((facetConfig) => {
+      const selectedValues = getSelectedValues(query, facetConfig.field);
+      initialExpanded[facetConfig.field] = selectedValues.length > 0;
+    });
+    setExpandedFacets(initialExpanded);
+  }, [query]);
 
   // Execute search when query parameters change
   useEffect(() => {
@@ -69,8 +81,38 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
         const totalRaw = countResult.getChildAt(0)?.get(0);
         const total = typeof totalRaw === 'bigint' ? Number(totalRaw) : totalRaw as number;
 
-        // Execute facet queries in parallel
-        const facetPromises = facetsConfig.map(async (facetConfig) => {
+        const overallEnd = performance.now();
+        onQueryTime(overallEnd - overallStart);
+
+        setResults(records);
+        setTotalResults(total);
+
+        // Clear loaded facets when query changes so they reload with new filters
+        setLoadedFacets({});
+        setFacets({});
+      } catch (error) {
+        console.error('Search error:', error);
+        setResults([]);
+        setTotalResults(0);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    executeSearch();
+  }, [conn, query, currentPage, onQueryTime, addQuery, clearQueries]);
+
+  // Load facet data when a facet is expanded
+  useEffect(() => {
+    async function loadExpandedFacets() {
+      const facetsToLoad = facetsConfig.filter(
+        (config) => expandedFacets[config.field] && !loadedFacets[config.field]
+      );
+
+      if (facetsToLoad.length === 0) return;
+
+      try {
+        const facetPromises = facetsToLoad.map(async (facetConfig) => {
           const facetSql = buildFacetQuery(facetConfig, query);
           const facetStart = performance.now();
           const facetResult = await conn.query(facetSql);
@@ -90,25 +132,33 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
         });
 
         const facetResults = await Promise.all(facetPromises);
-        const facetMap = Object.fromEntries(facetResults);
 
-        const overallEnd = performance.now();
-        onQueryTime(overallEnd - overallStart);
+        setFacets((prev) => ({
+          ...prev,
+          ...Object.fromEntries(facetResults),
+        }));
 
-        setResults(records);
-        setTotalResults(total);
-        setFacets(facetMap);
+        setLoadedFacets((prev) => {
+          const newLoaded = { ...prev };
+          facetsToLoad.forEach((config) => {
+            newLoaded[config.field] = true;
+          });
+          return newLoaded;
+        });
       } catch (error) {
-        console.error('Search error:', error);
-        setResults([]);
-        setTotalResults(0);
-      } finally {
-        setIsLoading(false);
+        console.error('Error loading facets:', error);
       }
     }
 
-    executeSearch();
-  }, [conn, query, currentPage, onQueryTime, addQuery, clearQueries]);
+    loadExpandedFacets();
+  }, [conn, query, expandedFacets, loadedFacets, addQuery]);
+
+  function handleToggleFacet(field: string) {
+    setExpandedFacets((prev) => ({
+      ...prev,
+      [field]: !prev[field],
+    }));
+  }
 
   return (
     <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -137,6 +187,12 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
                 config={facetConfig}
                 values={facets[facetConfig.field] || []}
                 selectedValues={getSelectedValues(query, facetConfig.field)}
+                isExpanded={expandedFacets[facetConfig.field] || false}
+                onToggle={() => handleToggleFacet(facetConfig.field)}
+                isLoading={
+                  expandedFacets[facetConfig.field] &&
+                  !loadedFacets[facetConfig.field]
+                }
               />
             ))}
           </div>

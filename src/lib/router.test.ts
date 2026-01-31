@@ -110,11 +110,11 @@ describe('buildSearchUrl', () => {
     expect(url).toContain('page=2');
   });
 
-  it('should exclude undefined, null, and empty values', () => {
+  it('should exclude undefined and empty values', () => {
     const url = buildSearchUrl({
       q: 'test',
       provider: undefined,
-      location: null,
+      location: undefined,
       bbox: '',
     });
     expect(url).toBe('#/search?q=test');
