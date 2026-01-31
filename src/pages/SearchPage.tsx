@@ -10,6 +10,7 @@ import { Pagination } from '@/components/search/Pagination';
 import { buildSearchQuery, buildFacetQuery } from '@/lib/queries';
 import { getFacetableFields } from '@/lib/fieldsConfig';
 import { calculatePagination } from '@/utils/pagination';
+import { useQueryHistory } from '@/hooks/useQueryHistory';
 
 const facetsConfig = getFacetableFields();
 
@@ -27,6 +28,7 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
   const [totalResults, setTotalResults] = useState(0);
   const [facets, setFacets] = useState<Record<string, FacetValue[]>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const { addQuery, clearQueries } = useQueryHistory();
 
   const currentPage = query.page || 1;
   const pagination = calculatePagination(currentPage, totalResults);
@@ -35,12 +37,16 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
   useEffect(() => {
     async function executeSearch() {
       setIsLoading(true);
+      clearQueries(); // Clear previous queries
       try {
-        const startTime = performance.now();
+        const overallStart = performance.now();
 
         // Build and execute main search query
         const searchSql = buildSearchQuery(query, currentPage);
+        const queryStart = performance.now();
         const searchResult = await conn.query(searchSql);
+        const queryEnd = performance.now();
+        addQuery('Search Query', searchSql, queryEnd - queryStart);
 
         // Parse results
         const records: MetadataRecord[] = [];
@@ -55,14 +61,20 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
 
         // Get total count
         const countSql = buildSearchQuery(query, currentPage, true);
+        const countStart = performance.now();
         const countResult = await conn.query(countSql);
+        const countEnd = performance.now();
+        addQuery('Count Query', countSql, countEnd - countStart);
         const totalRaw = countResult.getChildAt(0)?.get(0);
         const total = typeof totalRaw === 'bigint' ? Number(totalRaw) : totalRaw as number;
 
         // Execute facet queries in parallel
         const facetPromises = facetsConfig.map(async (facetConfig) => {
           const facetSql = buildFacetQuery(facetConfig, query);
+          const facetStart = performance.now();
           const facetResult = await conn.query(facetSql);
+          const facetEnd = performance.now();
+          addQuery(`Facet: ${facetConfig.label}`, facetSql, facetEnd - facetStart);
 
           const values: FacetValue[] = [];
           for (let i = 0; i < facetResult.numRows; i++) {
@@ -79,8 +91,8 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
         const facetResults = await Promise.all(facetPromises);
         const facetMap = Object.fromEntries(facetResults);
 
-        const endTime = performance.now();
-        onQueryTime(endTime - startTime);
+        const overallEnd = performance.now();
+        onQueryTime(overallEnd - overallStart);
 
         setResults(records);
         setTotalResults(total);

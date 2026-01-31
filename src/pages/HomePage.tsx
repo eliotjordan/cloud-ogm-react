@@ -4,6 +4,7 @@ import { buildSearchUrl, navigate } from '@/lib/router';
 import { LocationSearch } from '@/components/LocationSearch';
 import { ResourceClassGrid } from '@/components/ResourceClassGrid';
 import type { ResourceClassInfo } from '@/types';
+import { useQueryHistory } from '@/hooks/useQueryHistory';
 
 interface HomePageProps {
   conn: AsyncDuckDBConnection;
@@ -19,21 +20,29 @@ export function HomePage({ conn, onQueryTime }: HomePageProps) {
     []
   );
   const [isLoadingClasses, setIsLoadingClasses] = useState(true);
+  const { addQuery, clearQueries } = useQueryHistory();
 
   // Load resource class counts on mount
   useEffect(() => {
     async function loadResourceClasses() {
       try {
-        const startTime = performance.now();
-        const result = await conn.query(`
+        clearQueries(); // Clear previous queries
+        const overallStart = performance.now();
+
+        const sql = `
           SELECT unnested_value as name, COUNT(*) as count
           FROM parquet_data
           CROSS JOIN UNNEST(resource_class) as t(unnested_value)
           GROUP BY unnested_value
           ORDER BY count DESC, unnested_value ASC
-        `);
-        const endTime = performance.now();
-        onQueryTime(endTime - startTime);
+        `;
+        const queryStart = performance.now();
+        const result = await conn.query(sql);
+        const queryEnd = performance.now();
+        addQuery('Resource Class Aggregation', sql, queryEnd - queryStart);
+
+        const overallEnd = performance.now();
+        onQueryTime(overallEnd - overallStart);
 
         const classes: ResourceClassInfo[] = [];
         for (let i = 0; i < result.numRows; i++) {

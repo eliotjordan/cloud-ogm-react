@@ -9,6 +9,7 @@ import { PMTilesViewer } from '@/components/viewers/PMTilesViewer';
 import { LocationMap } from '@/components/viewers/LocationMap';
 import { DownloadsCard } from '@/components/item/DownloadsCard';
 import { MetadataCard } from '@/components/item/MetadataCard';
+import { useQueryHistory } from '@/hooks/useQueryHistory';
 
 interface ItemDetailProps {
   itemId: string;
@@ -23,19 +24,27 @@ export function ItemDetail({ itemId, conn, onQueryTime }: ItemDetailProps) {
   const [item, setItem] = useState<MetadataRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { addQuery, clearQueries } = useQueryHistory();
 
   useEffect(() => {
     async function loadItem() {
       try {
-        const startTime = performance.now();
-        const result = await conn.query(`
+        clearQueries(); // Clear previous queries
+        const overallStart = performance.now();
+
+        const sql = `
           SELECT *
           FROM parquet_data
           WHERE id = '${itemId.replace(/'/g, "''")}'
           LIMIT 1
-        `);
-        const endTime = performance.now();
-        onQueryTime(endTime - startTime);
+        `;
+        const queryStart = performance.now();
+        const result = await conn.query(sql);
+        const queryEnd = performance.now();
+        addQuery('Item Detail Query', sql, queryEnd - queryStart);
+
+        const overallEnd = performance.now();
+        onQueryTime(overallEnd - overallStart);
 
         if (result.numRows === 0) {
           setError('Item not found');
