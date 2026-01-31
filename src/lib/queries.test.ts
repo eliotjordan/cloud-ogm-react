@@ -1,0 +1,310 @@
+import { describe, it, expect } from 'vitest';
+import { buildSearchQuery, buildFacetQuery } from './queries';
+import type { SearchParams, FieldConfig } from '@/types';
+
+describe('buildSearchQuery', () => {
+  it('should build basic search query without filters', () => {
+    const params: SearchParams = {};
+    const sql = buildSearchQuery(params, 1);
+
+    expect(sql).toContain('SELECT');
+    expect(sql).toContain('FROM parquet_data');
+    expect(sql).toContain('LIMIT');
+    expect(sql).toContain('OFFSET');
+  });
+
+  it('should include text search filter', () => {
+    const params: SearchParams = { q: 'test' };
+    const sql = buildSearchQuery(params, 1);
+
+    expect(sql).toContain('WHERE');
+    expect(sql).toContain('title ILIKE');
+    expect(sql).toContain('%test%');
+  });
+
+  it('should escape SQL special characters in text search', () => {
+    const params: SearchParams = { q: "test'query" };
+    const sql = buildSearchQuery(params, 1);
+
+    // Should escape single quotes
+    expect(sql).toContain("test''query");
+  });
+
+  it('should include bbox filter with ST_Intersects', () => {
+    const params: SearchParams = { bbox: '-122,37,-121,38' };
+    const sql = buildSearchQuery(params, 1);
+
+    expect(sql).toContain('WHERE');
+    expect(sql).toContain('ST_Intersects');
+    expect(sql).toContain('POLYGON');
+    expect(sql).toContain('geometry');
+  });
+
+  it('should include bbox in ORDER BY when present', () => {
+    const params: SearchParams = { bbox: '-122,37,-121,38' };
+    const sql = buildSearchQuery(params, 1);
+
+    expect(sql).toContain('ORDER BY ratio ASC');
+    expect(sql).toContain('ratio');
+  });
+
+  it('should not include ORDER BY without bbox', () => {
+    const params: SearchParams = { q: 'test' };
+    const sql = buildSearchQuery(params, 1);
+
+    expect(sql).not.toContain('ORDER BY');
+    expect(sql).not.toContain('ratio');
+  });
+
+  it('should handle scalar facet filter (provider)', () => {
+    const params: SearchParams = { provider: 'Stanford' };
+    const sql = buildSearchQuery(params, 1);
+
+    expect(sql).toContain('WHERE');
+    expect(sql).toContain('provider IN');
+    expect(sql).toContain("'Stanford'");
+  });
+
+  it('should handle multiple scalar facet values', () => {
+    const params: SearchParams = { provider: 'Stanford,MIT' };
+    const sql = buildSearchQuery(params, 1);
+
+    expect(sql).toContain('provider IN');
+    expect(sql).toContain("'Stanford'");
+    expect(sql).toContain("'MIT'");
+  });
+
+  it('should handle array facet filter (location)', () => {
+    const params: SearchParams = { location: 'Paris' };
+    const sql = buildSearchQuery(params, 1);
+
+    expect(sql).toContain('WHERE');
+    expect(sql).toContain('list_contains');
+    expect(sql).toContain('location');
+    expect(sql).toContain("'Paris'");
+  });
+
+  it('should handle multiple array facet values with OR', () => {
+    const params: SearchParams = { location: 'Paris,London' };
+    const sql = buildSearchQuery(params, 1);
+
+    expect(sql).toContain('list_contains(location,');
+    expect(sql).toContain("'Paris'");
+    expect(sql).toContain("'London'");
+    expect(sql).toContain('OR');
+  });
+
+  it('should combine multiple filters with AND', () => {
+    const params: SearchParams = {
+      q: 'map',
+      provider: 'Stanford',
+      location: 'Paris',
+    };
+    const sql = buildSearchQuery(params, 1);
+
+    expect(sql).toContain('title ILIKE');
+    expect(sql).toContain('provider IN');
+    expect(sql).toContain('list_contains(location,');
+    expect(sql).toContain('AND');
+  });
+
+  it('should build count query when countOnly is true', () => {
+    const params: SearchParams = { q: 'test' };
+    const sql = buildSearchQuery(params, 1, true);
+
+    expect(sql).toContain('SELECT COUNT(*)');
+    expect(sql).not.toContain('LIMIT');
+    expect(sql).not.toContain('OFFSET');
+    expect(sql).toContain('WHERE');
+  });
+
+  it('should handle pagination correctly', () => {
+    const params: SearchParams = {};
+    const page1 = buildSearchQuery(params, 1);
+    const page2 = buildSearchQuery(params, 2);
+
+    expect(page1).toContain('LIMIT 10 OFFSET 0');
+    expect(page2).toContain('LIMIT 10 OFFSET 10');
+  });
+
+  it('should handle all facetable fields', () => {
+    const params: SearchParams = {
+      location: 'Paris',
+      provider: 'Stanford',
+      access_rights: 'Public',
+      resource_class: 'Maps',
+      resource_type: 'Image',
+      theme: 'Transportation',
+    };
+    const sql = buildSearchQuery(params, 1);
+
+    // Array fields
+    expect(sql).toContain('list_contains(location,');
+    expect(sql).toContain('list_contains(resource_class,');
+    expect(sql).toContain('list_contains(resource_type,');
+    expect(sql).toContain('list_contains(theme,');
+
+    // Scalar fields
+    expect(sql).toContain('provider IN');
+    expect(sql).toContain('access_rights IN');
+  });
+
+  it('should select required fields for search', () => {
+    const params: SearchParams = {};
+    const sql = buildSearchQuery(params, 1);
+
+    // Essential fields
+    expect(sql).toContain('id');
+    expect(sql).toContain('geometry');
+    expect(sql).toContain('geojson');
+  });
+});
+
+describe('buildFacetQuery', () => {
+  it('should build facet query for array field', () => {
+    const facetConfig: FieldConfig = {
+      field: 'location',
+      label: 'Place',
+      isArray: true,
+      facetable: true,
+      displayOnCard: false,
+      displayOnItem: true,
+    };
+    const params: SearchParams = {};
+    const sql = buildFacetQuery(facetConfig, params);
+
+    expect(sql).toContain('SELECT unnested_value as value');
+    expect(sql).toContain('COUNT(*) as count');
+    expect(sql).toContain('CROSS JOIN UNNEST');
+    expect(sql).toContain('location');
+    expect(sql).toContain('GROUP BY unnested_value');
+    expect(sql).toContain('ORDER BY count DESC');
+    expect(sql).toContain('LIMIT 20');
+  });
+
+  it('should build facet query for scalar field', () => {
+    const facetConfig: FieldConfig = {
+      field: 'provider',
+      label: 'Provider',
+      isArray: false,
+      facetable: true,
+      displayOnCard: true,
+      displayOnItem: true,
+    };
+    const params: SearchParams = {};
+    const sql = buildFacetQuery(facetConfig, params);
+
+    expect(sql).toContain('SELECT provider as value');
+    expect(sql).toContain('COUNT(*) as count');
+    expect(sql).not.toContain('UNNEST');
+    expect(sql).toContain('GROUP BY provider');
+    expect(sql).toContain('ORDER BY count DESC, provider ASC');
+  });
+
+  it('should apply text search filter to facet query', () => {
+    const facetConfig: FieldConfig = {
+      field: 'location',
+      label: 'Place',
+      isArray: true,
+      facetable: true,
+      displayOnCard: false,
+      displayOnItem: true,
+    };
+    const params: SearchParams = { q: 'map' };
+    const sql = buildFacetQuery(facetConfig, params);
+
+    expect(sql).toContain('WHERE');
+    expect(sql).toContain('title ILIKE');
+    expect(sql).toContain('%map%');
+  });
+
+  it('should apply bbox filter to facet query', () => {
+    const facetConfig: FieldConfig = {
+      field: 'provider',
+      label: 'Provider',
+      isArray: false,
+      facetable: true,
+      displayOnCard: true,
+      displayOnItem: true,
+    };
+    const params: SearchParams = { bbox: '-122,37,-121,38' };
+    const sql = buildFacetQuery(facetConfig, params);
+
+    expect(sql).toContain('WHERE');
+    expect(sql).toContain('ST_Intersects');
+    expect(sql).toContain('POLYGON');
+  });
+
+  it('should apply other facet filters but exclude own field', () => {
+    const facetConfig: FieldConfig = {
+      field: 'location',
+      label: 'Place',
+      isArray: true,
+      facetable: true,
+      displayOnCard: false,
+      displayOnItem: true,
+    };
+    const params: SearchParams = {
+      location: 'Paris', // Should be excluded
+      provider: 'Stanford', // Should be included
+    };
+    const sql = buildFacetQuery(facetConfig, params);
+
+    expect(sql).toContain('provider IN');
+    expect(sql).not.toContain('list_contains(location,');
+  });
+
+  it('should combine multiple filters in facet query', () => {
+    const facetConfig: FieldConfig = {
+      field: 'resource_class',
+      label: 'Resource Class',
+      isArray: true,
+      facetable: true,
+      displayOnCard: false,
+      displayOnItem: true,
+    };
+    const params: SearchParams = {
+      q: 'test',
+      provider: 'Stanford',
+      location: 'Paris',
+    };
+    const sql = buildFacetQuery(facetConfig, params);
+
+    expect(sql).toContain('title ILIKE');
+    expect(sql).toContain('provider IN');
+    expect(sql).toContain('list_contains(location,');
+    expect(sql).not.toContain('list_contains(resource_class,');
+  });
+
+  it('should handle facet query with no filters', () => {
+    const facetConfig: FieldConfig = {
+      field: 'theme',
+      label: 'Theme',
+      isArray: true,
+      facetable: true,
+      displayOnCard: false,
+      displayOnItem: true,
+    };
+    const params: SearchParams = {};
+    const sql = buildFacetQuery(facetConfig, params);
+
+    expect(sql).not.toContain('WHERE');
+    expect(sql).toContain('GROUP BY');
+    expect(sql).toContain('ORDER BY');
+  });
+
+  it('should escape SQL in facet filters', () => {
+    const facetConfig: FieldConfig = {
+      field: 'location',
+      label: 'Place',
+      isArray: true,
+      facetable: true,
+      displayOnCard: false,
+      displayOnItem: true,
+    };
+    const params: SearchParams = { provider: "O'Brien" };
+    const sql = buildFacetQuery(facetConfig, params);
+
+    expect(sql).toContain("O''Brien");
+  });
+});

@@ -4,6 +4,7 @@ import {
   bboxToWkt,
   formatBboxParam,
   isValidBbox,
+  formatBboxLabel,
 } from './spatial';
 
 describe('parseBbox', () => {
@@ -77,5 +78,31 @@ describe('isValidBbox', () => {
 
     const bbox2 = { west: -122, south: 100, east: -121, north: 38 };
     expect(isValidBbox(bbox2)).toBe(false);
+  });
+});
+
+describe('formatBboxLabel', () => {
+  it('should format bbox with positive coordinates', () => {
+    const bbox = { west: 2.22, south: 48.82, east: 2.47, north: 48.90 };
+    const label = formatBboxLabel(bbox);
+    expect(label).toBe('48.90°N 2.22°E 48.82°N 2.47°E');
+  });
+
+  it('should format bbox with negative coordinates', () => {
+    const bbox = { west: -122.5, south: -37.8, east: -121.2, north: -36.5 };
+    const label = formatBboxLabel(bbox);
+    expect(label).toBe('36.50°S 122.50°W 37.80°S 121.20°W');
+  });
+
+  it('should format bbox with mixed coordinates', () => {
+    const bbox = { west: -2.5, south: 48.0, east: 2.5, north: 49.0 };
+    const label = formatBboxLabel(bbox);
+    expect(label).toBe('49.00°N 2.50°W 48.00°N 2.50°E');
+  });
+
+  it('should handle zero coordinates', () => {
+    const bbox = { west: 0, south: 0, east: 10, north: 10 };
+    const label = formatBboxLabel(bbox);
+    expect(label).toBe('10.00°N 0.00°E 0.00°N 10.00°E');
   });
 });
