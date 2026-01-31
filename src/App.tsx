@@ -19,59 +19,48 @@ export function App() {
   const route = useRouter();
   const [queryTime, setQueryTime] = useState<number | null>(null);
 
-  // Show loading screen during initialization
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Header queryTime={null} />
-        <main className="flex-1">
-          <LoadingSpinner />
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  // Show error if DuckDB initialization failed
-  if (error || !conn) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Header queryTime={null} />
-        <main className="flex-1">
-          <ErrorMessage
-            message={error || 'Failed to initialize database connection'}
-          />
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  // Render appropriate page based on route
-  let page;
-  if (route.route === 'item' && route.params[0]) {
-    page = (
-      <ItemDetail
-        itemId={route.params[0]}
-        conn={conn}
-        onQueryTime={setQueryTime}
-      />
-    );
-  } else if (route.route === 'search') {
-    page = (
-      <SearchPage conn={conn} query={route.query} onQueryTime={setQueryTime} />
-    );
-  } else {
-    page = <HomePage conn={conn} onQueryTime={setQueryTime} />;
-  }
-
   return (
     <QueryHistoryProvider>
-      <div className="min-h-screen flex flex-col">
-        <Header queryTime={queryTime} />
-        <main className="flex-1">{page}</main>
-        <Footer />
-      </div>
+      {/* Show loading screen during initialization */}
+      {isLoading ? (
+        <div className="min-h-screen flex flex-col">
+          <Header queryTime={null} />
+          <main className="flex-1">
+            <LoadingSpinner />
+          </main>
+          <Footer />
+        </div>
+      ) : error || !conn ? (
+        /* Show error if DuckDB initialization failed */
+        <div className="min-h-screen flex flex-col">
+          <Header queryTime={null} />
+          <main className="flex-1">
+            <ErrorMessage
+              message={error || 'Failed to initialize database connection'}
+            />
+          </main>
+          <Footer />
+        </div>
+      ) : (
+        /* Render appropriate page based on route */
+        <div className="min-h-screen flex flex-col">
+          <Header queryTime={queryTime} />
+          <main className="flex-1">
+            {route.route === 'item' && route.params[0] ? (
+              <ItemDetail
+                itemId={route.params[0]}
+                conn={conn}
+                onQueryTime={setQueryTime}
+              />
+            ) : route.route === 'search' ? (
+              <SearchPage conn={conn} query={route.query} onQueryTime={setQueryTime} />
+            ) : (
+              <HomePage conn={conn} onQueryTime={setQueryTime} />
+            )}
+          </main>
+          <Footer />
+        </div>
+      )}
     </QueryHistoryProvider>
   );
 }
