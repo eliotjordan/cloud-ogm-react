@@ -111,6 +111,9 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
 
   return (
     <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Visually hidden h1 for accessibility */}
+      <h1 className="sr-only">Search Results</h1>
+
       {/* Map */}
       <div className="mb-6">
         <SearchMap results={results} query={query} />

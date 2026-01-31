@@ -10,7 +10,7 @@ test.describe('Home Page', () => {
 
   test('should display home page with search inputs', async ({ page }) => {
     await expect(page.locator('h1')).toHaveText('Search OpenGeoMetadata');
-    await expect(page.locator('input[placeholder*="Search for a place"]')).toBeVisible();
+    await expect(page.locator('input[placeholder*="Location filter"]')).toBeVisible();
     await expect(page.locator('input[placeholder*="Search for maps"]')).toBeVisible();
   });
 
@@ -30,13 +30,14 @@ test.describe('Home Page', () => {
   test('should navigate to search page when submitting text search', async ({ page }) => {
     await page.fill('input[placeholder*="Search for maps"]', 'San Francisco');
     await page.click('button:has-text("Search")');
-    await expect(page).toHaveURL(/#\/search\?q=San%20Francisco/);
+    // Accept both + and %20 for space encoding
+    await expect(page).toHaveURL(/#\/search\?q=(San\+Francisco|San%20Francisco)/);
   });
 
   test('should navigate to filtered search when clicking resource class', async ({ page }) => {
     // Wait for resource classes to load
-    await page.waitForSelector('text=Maps', { timeout: 15000 });
-    await page.click('text=Maps');
+    await page.waitForSelector('button[aria-label*="Browse Maps"]', { timeout: 15000 });
+    await page.click('button[aria-label*="Browse Maps"]');
     await expect(page).toHaveURL(/resource_class=Maps/);
   });
 

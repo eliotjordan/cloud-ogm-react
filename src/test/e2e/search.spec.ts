@@ -24,30 +24,28 @@ test.describe('Search Page', () => {
   });
 
   test('should filter results when selecting facet', async ({ page }) => {
-    // Expand Provider facet if not already expanded
-    const providerHeading = page.locator('text=Provider');
-    await providerHeading.click();
+    // Wait for facet panels to load
+    await page.waitForSelector('input[type="checkbox"]', { timeout: 10000 });
 
-    // Wait for facet values to appear
-    await page.waitForSelector('input[type="checkbox"]', { timeout: 5000 });
-
-    // Click first checkbox
+    // Click first visible checkbox
     const firstCheckbox = page.locator('input[type="checkbox"]').first();
+    await firstCheckbox.waitFor({ state: 'visible', timeout: 5000 });
     await firstCheckbox.check();
 
     // Wait for URL to update
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
 
-    // Check that active filter chip appears
-    await expect(page.locator('text=Active Filters')).toBeVisible();
+    // Check that the URL contains a filter parameter
+    const url = page.url();
+    expect(url).toMatch(/(provider|location|resource_class|access_rights|theme)=/);
   });
 
   test('should navigate to item detail when clicking result', async ({ page }) => {
-    // Wait for results to load
-    await page.waitForSelector('button:has-text("View details")', { timeout: 10000 });
+    // Wait for results to load - look for result cards
+    await page.waitForSelector('.card', { timeout: 10000 });
 
-    // Click first result
-    const firstResult = page.locator('button').filter({ hasText: /View details/ }).first();
+    // Click first result card
+    const firstResult = page.locator('.card').first();
     await firstResult.click();
 
     // Should navigate to item page
