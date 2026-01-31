@@ -152,7 +152,8 @@ export function LocationSearch() {
       {/* Autocomplete Dropdown */}
       {showDropdown && results.length > 0 && (
         <div
-          className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+          className="absolute z-10 mt-1 left-0 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+          style={{ minWidth: '600px', width: 'max-content', maxWidth: 'calc(100vw - 16rem)' }}
           role="listbox"
         >
           {results.map((place) => (
