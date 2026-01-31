@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 import type { MetadataRecord } from '@/types';
-import { parseReferences, hasViewers } from '@/utils/references';
+import { parseReferences } from '@/utils/references';
 import { IIIFViewer } from '@/components/viewers/IIIFViewer';
 import { WMSViewer } from '@/components/viewers/WMSViewer';
 import { COGViewer } from '@/components/viewers/COGViewer';
@@ -97,7 +97,6 @@ export function ItemDetail({ itemId, conn, onQueryTime }: ItemDetailProps) {
   }
 
   const refs = parseReferences(item.references);
-  const showLocationMap = !hasViewers(refs);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -157,7 +156,7 @@ export function ItemDetail({ itemId, conn, onQueryTime }: ItemDetailProps) {
 
         {/* Right column - Map and Downloads */}
         <div className="space-y-6">
-          {showLocationMap && <LocationMap geojson={item.geojson} title={item.title} />}
+          <LocationMap geojson={item.geojson} title={item.title} />
           {refs?.download && (
             <DownloadsCard download={refs.download} format={item.format} />
           )}
