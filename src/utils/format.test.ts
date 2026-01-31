@@ -25,6 +25,12 @@ describe('formatValue', () => {
     expect(formatValue(['a', null, 'b'], true)).toBe('a, b');
   });
 
+  it('should return "N/A" for arrays with only null and undefined values', () => {
+    expect(formatValue([null, undefined, null], true)).toBe('N/A');
+    expect(formatValue([null], true)).toBe('N/A');
+    expect(formatValue([undefined, undefined], true)).toBe('N/A');
+  });
+
   it('should convert non-array values to strings', () => {
     expect(formatValue('hello')).toBe('hello');
     expect(formatValue(42)).toBe('42');
