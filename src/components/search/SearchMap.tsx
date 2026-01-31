@@ -101,6 +101,14 @@ export function SearchMap({ results, query }: SearchMapProps) {
       }).addTo(map);
 
       bboxRectRef.current = rectangle;
+
+      // Zoom to bbox with one level out
+      (map.fitBounds(bounds) as any).programmatic = true;
+      const currentZoom = map.getZoom();
+      map.setZoom(currentZoom - 1);
+
+      userMovedMap.current = false;
+      setShowSearchHere(false);
     }
   }, [query.bbox]);
 
