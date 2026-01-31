@@ -14,6 +14,15 @@ export function ActiveFilters({ query, facetsConfig }: ActiveFiltersProps) {
   const activeFilters: Array<{ field: string; value: string; label: string }> =
     [];
 
+  // Add keyword search filter if present
+  if (query.q) {
+    activeFilters.push({
+      field: 'q',
+      value: query.q,
+      label: query.q,
+    });
+  }
+
   // Add bbox filter if present
   if (query.bbox) {
     const bbox = parseBbox(query.bbox);
@@ -43,6 +52,15 @@ export function ActiveFilters({ query, facetsConfig }: ActiveFiltersProps) {
   if (activeFilters.length === 0) return null;
 
   function handleRemoveFilter(field: string, value: string) {
+    // Handle keyword search removal
+    if (field === 'q') {
+      updateSearchParams({
+        q: undefined,
+        page: 1,
+      });
+      return;
+    }
+
     // Handle bbox removal specially
     if (field === 'bbox') {
       updateSearchParams({
