@@ -29,3 +29,6 @@ test-results
 playwright-report
 playwright/.cache
 .playwright
+
+# LLM
+CLAUDE.md
