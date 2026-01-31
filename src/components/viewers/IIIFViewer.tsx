@@ -22,8 +22,14 @@ export function IIIFViewer({ iiifContent, title }: IIIFViewerProps) {
           </p>
         )}
       </div>
-      <div className="h-[640px]">
-        <Viewer iiifContent={iiifContent} />
+      <div className="h-[640px] w-full">
+        <Viewer
+          iiifContent={iiifContent}
+          options={{
+            showTitle: false,
+            showInformationToggle: false,
+          }}
+        />
       </div>
     </div>
   );
