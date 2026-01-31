@@ -1,5 +1,6 @@
 import type { SearchParams, FieldConfig } from '@/types';
 import { clearFilters, updateSearchParams } from '@/lib/router';
+import { parseBbox, formatBboxLabel, isValidBbox } from '@/utils/spatial';
 
 interface ActiveFiltersProps {
   query: SearchParams;
@@ -12,6 +13,18 @@ interface ActiveFiltersProps {
 export function ActiveFilters({ query, facetsConfig }: ActiveFiltersProps) {
   const activeFilters: Array<{ field: string; value: string; label: string }> =
     [];
+
+  // Add bbox filter if present
+  if (query.bbox) {
+    const bbox = parseBbox(query.bbox);
+    if (bbox && isValidBbox(bbox)) {
+      activeFilters.push({
+        field: 'bbox',
+        value: query.bbox,
+        label: `Map Area: ${formatBboxLabel(bbox)}`,
+      });
+    }
+  }
 
   facetsConfig.forEach((config) => {
     const value = query[config.field];
@@ -30,6 +43,15 @@ export function ActiveFilters({ query, facetsConfig }: ActiveFiltersProps) {
   if (activeFilters.length === 0) return null;
 
   function handleRemoveFilter(field: string, value: string) {
+    // Handle bbox removal specially
+    if (field === 'bbox') {
+      updateSearchParams({
+        bbox: undefined,
+        page: 1,
+      });
+      return;
+    }
+
     const currentValue = query[field];
     if (!currentValue) return;
 
