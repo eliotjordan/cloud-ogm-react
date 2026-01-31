@@ -6,6 +6,7 @@ import VectorTileLayer from 'ol/layer/VectorTile';
 import OSM from 'ol/source/OSM';
 import { fromLonLat } from 'ol/proj';
 import { PMTilesVectorSource } from 'ol-pmtiles';
+import GeoJSON from 'ol/format/GeoJSON';
 import 'ol/ol.css';
 
 interface PMTilesViewerProps {
@@ -50,13 +51,20 @@ export function PMTilesViewer({ pmtilesUrl, geojson }: PMTilesViewerProps) {
     // Fit to geometry if available
     if (geojson) {
       try {
-        const geoData = JSON.parse(geojson);
-        if (geoData.coordinates) {
-          const coords = geoData.coordinates;
-          if (geoData.type === 'Point') {
-            map.getView().setCenter(fromLonLat(coords));
-            map.getView().setZoom(10);
-          }
+        const format = new GeoJSON();
+        const features = format.readFeature(geojson, {
+          dataProjection: 'EPSG:4326',
+          featureProjection: 'EPSG:3857',
+        });
+
+        // Handle both single feature and array
+        const feature = Array.isArray(features) ? features[0] : features;
+        const extent = feature?.getGeometry()?.getExtent();
+        if (extent) {
+          map.getView().fit(extent, {
+            padding: [50, 50, 50, 50],
+            maxZoom: 16,
+          });
         }
       } catch (error) {
         console.error('Failed to parse GeoJSON for PMTiles viewer:', error);

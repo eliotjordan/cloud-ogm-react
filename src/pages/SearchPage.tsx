@@ -111,13 +111,13 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
 
   return (
     <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      {/* Search Header */}
-      <SearchHeader query={query} />
-
       {/* Map */}
       <div className="mb-6">
         <SearchMap results={results} query={query} />
       </div>
+
+      {/* Search Header */}
+      <SearchHeader query={query} />
 
       {/* Active Filters */}
       <ActiveFilters query={query} facetsConfig={facetsConfig} />
