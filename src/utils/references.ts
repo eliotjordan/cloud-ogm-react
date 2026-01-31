@@ -15,6 +15,7 @@ export function parseReferences(
 
     return {
       iiifManifest: refs[REFERENCE_KEYS.IIIF_MANIFEST],
+      iiifImage: refs[REFERENCE_KEYS.IIIF_IMAGE],
       wms: refs[REFERENCE_KEYS.WMS],
       cog: refs[REFERENCE_KEYS.COG],
       pmtiles: refs[REFERENCE_KEYS.PMTILES],
@@ -31,5 +32,5 @@ export function parseReferences(
  */
 export function hasViewers(refs: ParsedReferences | null): boolean {
   if (!refs) return false;
-  return !!(refs.iiifManifest || refs.wms || refs.cog || refs.pmtiles);
+  return !!(refs.iiifManifest || refs.iiifImage || refs.wms || refs.cog || refs.pmtiles);
 }

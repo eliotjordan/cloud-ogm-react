@@ -34,6 +34,7 @@ export const EXCLUDED_LOCATION_TYPES = [
  */
 export const REFERENCE_KEYS = {
   IIIF_MANIFEST: 'http://iiif.io/api/presentation#manifest',
+  IIIF_IMAGE: 'http://iiif.io/api/image',
   WMS: 'http://www.opengis.net/def/serviceType/ogc/wms',
   COG: 'https://github.com/cogeotiff/cog-spec',
   PMTILES: 'https://github.com/protomaps/PMTiles',

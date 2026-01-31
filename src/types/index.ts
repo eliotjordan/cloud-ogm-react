@@ -33,6 +33,7 @@ export interface MetadataRecord {
  */
 export interface ParsedReferences {
   iiifManifest?: string;
+  iiifImage?: string;
   wms?: string;
   cog?: string;
   pmtiles?: string;
