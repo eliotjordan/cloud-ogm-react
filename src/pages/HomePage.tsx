@@ -143,18 +143,9 @@ export function HomePage({ conn, onQueryTime }: HomePageProps) {
 
       {/* Browse by Resource Class */}
       <div>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-            Browse by Resource Class
-          </h2>
-          <button
-            onClick={handleBrowseAll}
-            className="btn-secondary text-sm"
-            aria-label="Browse all resources"
-          >
-            Browse All Resources
-          </button>
-        </div>
+        <h2 className="text-2xl font-semibold text-primary-600 dark:text-primary-400 mb-6">
+          Browse by Resource Class
+        </h2>
 
         {isLoadingClasses ? (
           <div className="text-center py-12 text-gray-500">
@@ -164,6 +155,7 @@ export function HomePage({ conn, onQueryTime }: HomePageProps) {
           <ResourceClassGrid
             classes={resourceClasses}
             onClassClick={handleResourceClassClick}
+            onBrowseAll={handleBrowseAll}
           />
         )}
       </div>
