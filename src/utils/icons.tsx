@@ -14,6 +14,7 @@ export function getResourceClassIcon(
     value &&
     typeof value === 'object' &&
     'toArray' in value &&
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     typeof (value as any).toArray === 'function'
   ) {
     try {

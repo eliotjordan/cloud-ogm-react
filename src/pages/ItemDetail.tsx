@@ -54,6 +54,7 @@ export function ItemDetail({ itemId, conn, onQueryTime }: ItemDetailProps) {
         const record: Partial<MetadataRecord> = {};
         result.schema.fields.forEach((field, idx) => {
           const value = result.getChildAt(idx)?.get(0);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           record[field.name as keyof MetadataRecord] = value as any;
         });
 
@@ -67,7 +68,7 @@ export function ItemDetail({ itemId, conn, onQueryTime }: ItemDetailProps) {
     }
 
     loadItem();
-  }, [itemId, conn, onQueryTime]);
+  }, [itemId, conn, onQueryTime, addQuery, clearQueries]);
 
   function handleBack() {
     window.history.back();

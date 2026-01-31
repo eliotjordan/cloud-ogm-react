@@ -63,7 +63,7 @@ export function HomePage({ conn, onQueryTime }: HomePageProps) {
     }
 
     loadResourceClasses();
-  }, [conn, onQueryTime]);
+  }, [conn, onQueryTime, addQuery, clearQueries]);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();

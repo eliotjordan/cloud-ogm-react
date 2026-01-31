@@ -54,6 +54,7 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
           const record: Partial<MetadataRecord> = {};
           searchResult.schema.fields.forEach((field, idx) => {
             const value = searchResult.getChildAt(idx)?.get(i);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             record[field.name as keyof MetadataRecord] = value as any;
           });
           records.push(record as MetadataRecord);
@@ -107,7 +108,7 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
     }
 
     executeSearch();
-  }, [conn, query, currentPage, onQueryTime]);
+  }, [conn, query, currentPage, onQueryTime, addQuery, clearQueries]);
 
   return (
     <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6">

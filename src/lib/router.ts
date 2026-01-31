@@ -108,7 +108,7 @@ export function toggleFilter(
   const updated: SearchParams = { ...current.query, page: 1 }; // Reset to page 1
 
   if (newValues.length > 0) {
-    updated[field as keyof SearchParams] = newValues.join(',') as any;
+    updated[field as keyof SearchParams] = newValues.join(',');
   } else {
     delete updated[field as keyof SearchParams];
   }

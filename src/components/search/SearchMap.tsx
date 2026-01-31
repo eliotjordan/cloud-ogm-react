@@ -33,6 +33,7 @@ export function SearchMap({ results, query }: SearchMapProps) {
 
     // Track user-initiated map moves
     map.on('movestart', (e) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (!(e as any).programmatic) {
         userMovedMap.current = true;
       }
@@ -103,6 +104,7 @@ export function SearchMap({ results, query }: SearchMapProps) {
       bboxRectRef.current = rectangle;
 
       // Zoom to bbox with one level out
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (map.fitBounds(bounds) as any).programmatic = true;
       const currentZoom = map.getZoom();
       map.setZoom(currentZoom - 1);
@@ -153,6 +155,7 @@ export function SearchMap({ results, query }: SearchMapProps) {
         newMarkers.map((marker) => marker.getLatLng())
       );
       if (bounds.isValid()) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (map.fitBounds(bounds, { padding: [50, 50] }) as any).programmatic =
           true;
         userMovedMap.current = false;

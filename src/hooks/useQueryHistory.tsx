@@ -60,6 +60,7 @@ export function QueryHistoryProvider({ children }: { children: ReactNode }) {
 /**
  * Hook to access query history
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useQueryHistory() {
   const context = useContext(QueryHistoryContext);
   if (!context) {

@@ -75,6 +75,7 @@ export function useDuckDB() {
         conn.close().catch(console.error);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { conn, isLoading, error };
