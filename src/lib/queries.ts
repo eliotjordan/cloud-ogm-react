@@ -47,7 +47,7 @@ export function buildSearchQuery(
   if (params.q) {
     const escaped = escapeSqlString(params.q);
     whereClauses.push(
-      `(title ILIKE '%${escaped}%' OR list_contains(description, '${escaped}'))`
+      `(title ILIKE '%${escaped}%' OR list_contains(description, '${escaped}'::VARCHAR))`
     );
   }
 
@@ -125,7 +125,7 @@ export function buildFacetQuery(
   if (params.q) {
     const escaped = escapeSqlString(params.q);
     whereClauses.push(
-      `(title ILIKE '%${escaped}%' OR list_contains(description, '${escaped}'))`
+      `(title ILIKE '%${escaped}%' OR list_contains(description, '${escaped}'::VARCHAR))`
     );
   }
 
