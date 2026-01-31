@@ -107,7 +107,7 @@ export function buildSearchQuery(
     SELECT ${selectClause}
     FROM parquet_data
     ${whereClause}
-    ORDER BY ${hasBbox ? 'ratio ASC' : ''}
+    ${hasBbox ? 'ORDER BY ratio ASC' : ''}
     LIMIT ${limit} OFFSET ${offset}
   `;
 }
