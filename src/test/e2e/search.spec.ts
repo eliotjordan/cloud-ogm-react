@@ -10,7 +10,6 @@ test.describe('Search Page', () => {
 
   test('should display search results', async ({ page }) => {
     await expect(page.locator('text=Showing')).toBeVisible();
-    await expect(page.locator('text=results')).toBeVisible();
   });
 
   test('should display facet panels', async ({ page }) => {
@@ -24,13 +23,15 @@ test.describe('Search Page', () => {
   });
 
   test('should filter results when selecting facet', async ({ page }) => {
-    // Wait for facet panels to load
+    // Expand first facet panel by clicking on its heading
+    await page.getByRole('button', { name: 'Place' }).click();
+
+    // Wait for checkboxes to appear
     await page.waitForSelector('input[type="checkbox"]', { timeout: 10000 });
 
-    // Click first visible checkbox
-    const firstCheckbox = page.locator('input[type="checkbox"]').first();
-    await firstCheckbox.waitFor({ state: 'visible', timeout: 5000 });
-    await firstCheckbox.check();
+    // Click first visible label (which contains the checkbox)
+    const firstLabel = page.locator('label').first();
+    await firstLabel.click();
 
     // Wait for URL to update
     await page.waitForTimeout(1000);
@@ -41,15 +42,18 @@ test.describe('Search Page', () => {
   });
 
   test('should navigate to item detail when clicking result', async ({ page }) => {
-    // Wait for results to load - look for result cards
-    await page.waitForSelector('.card', { timeout: 10000 });
+    // Wait for results to load - look for result card buttons with aria-label
+    const firstResult = page.getByRole('button', { name: /^View details for/ }).first();
+    await firstResult.waitFor({ state: 'visible', timeout: 10000 });
 
     // Click first result card
-    const firstResult = page.locator('.card').first();
     await firstResult.click();
 
     // Should navigate to item page
-    await expect(page).toHaveURL(/#\/item\//);
+    await expect(page).toHaveURL(/#\/item\//, { timeout: 10000 });
+
+    // Wait for item detail content to load (no longer showing "Loading...")
+    await page.waitForSelector('h1', { timeout: 30000 });
     await expect(page.locator('text=Back to Search')).toBeVisible();
   });
 

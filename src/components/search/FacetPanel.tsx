@@ -30,9 +30,9 @@ export function FacetPanel({
           className="w-full flex items-center justify-between text-left focus:outline-none focus:ring-2 focus:ring-primary-500 rounded"
           aria-expanded={isExpanded}
         >
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+          <h2 className="font-semibold text-gray-900 dark:text-gray-100">
             {config.label}
-          </h3>
+          </h2>
           <svg
             className={`w-5 h-5 text-gray-500 transition-transform ${
               isExpanded ? 'rotate-180' : ''

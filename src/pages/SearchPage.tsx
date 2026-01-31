@@ -143,6 +143,7 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
 
         {/* Main content - Results */}
         <div className="lg:col-span-3">
+          <h2 className="sr-only">Search Results List</h2>
           {!isLoading && (
             <div className="mb-4">
               <p className="text-sm text-gray-600 dark:text-gray-400">
