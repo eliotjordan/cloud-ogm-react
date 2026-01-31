@@ -29,9 +29,6 @@ export function getResourceClassIcon(
   // Normalize to string and lowercase for matching
   const normalized = firstClass ? String(firstClass).toLowerCase().trim() : '';
 
-  // Debug logging
-  console.log('Resource class icon lookup:', { className, value, firstClass, normalized });
-
   switch (normalized) {
     case 'maps':
       return (
