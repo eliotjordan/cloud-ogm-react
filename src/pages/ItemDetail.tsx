@@ -130,12 +130,11 @@ export function ItemDetail({ itemId, conn, onQueryTime }: ItemDetailProps) {
 
       {/* Viewers */}
       <div className="space-y-6 mb-8">
-        {refs?.iiifManifest && (
+        {refs?.iiifManifest ? (
           <IIIFViewer iiifContent={refs.iiifManifest} title={item.title} />
-        )}
-        {refs?.iiifImage && (
+        ) : refs?.iiifImage ? (
           <IIIFViewer iiifContent={refs.iiifImage} title={item.title} />
-        )}
+        ) : null}
         {refs?.wms && (
           <WMSViewer
             wmsUrl={refs.wms}
