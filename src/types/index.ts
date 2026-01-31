@@ -113,10 +113,12 @@ export interface RouteInfo {
 export interface NominatimPlace {
   place_id: number;
   display_name: string;
+  name?: string;
   lat: string;
   lon: string;
   boundingbox: [string, string, string, string]; // [south, north, west, east]
   type: string;
+  addresstype?: string;
   class: string;
 }
 

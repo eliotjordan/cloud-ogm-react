@@ -160,10 +160,13 @@ export function LocationSearch() {
             <button
               key={place.place_id}
               onClick={() => handleSelectPlace(place)}
-              className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700 focus:outline-none first:rounded-t-lg last:rounded-b-lg"
+              className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700 focus:outline-none first:rounded-t-lg last:rounded-b-lg"
               role="option"
             >
-              <div className="text-sm text-gray-900 dark:text-gray-100">
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">
+                {place.name || place.display_name.split(',')[0]} ({place.addresstype || place.type})
+              </div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">
                 {place.display_name}
               </div>
             </button>
