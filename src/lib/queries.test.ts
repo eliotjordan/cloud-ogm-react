@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSearchQuery, buildFacetQuery } from './queries';
+import { buildSearchQuery, buildFacetQuery, buildSemanticSearchQuery } from './queries';
 import type { SearchParams, FieldConfig } from '@/types';
 
 describe('buildSearchQuery', () => {
@@ -288,7 +288,9 @@ describe('buildFacetQuery', () => {
     const params: SearchParams = {};
     const sql = buildFacetQuery(facetConfig, params);
 
-    expect(sql).not.toContain('WHERE');
+    // Should filter out NULL and empty values even with no user filters
+    expect(sql).toContain('WHERE unnested_value IS NOT NULL');
+    expect(sql).toContain("unnested_value != ''");
     expect(sql).toContain('GROUP BY');
     expect(sql).toContain('ORDER BY');
   });
@@ -306,5 +308,180 @@ describe('buildFacetQuery', () => {
     const sql = buildFacetQuery(facetConfig, params);
 
     expect(sql).toContain("O''Brien");
+  });
+
+  it('should handle semantic search with embeddings', () => {
+    const facetConfig: FieldConfig = {
+      field: 'theme',
+      label: 'Theme',
+      isArray: true,
+      facetable: true,
+      displayOnCard: false,
+      displayOnItem: true,
+    };
+    const params: SearchParams = { q: 'test' };
+    const queryEmbedding = new Float32Array([0.1, 0.2, 0.3]);
+    const sql = buildFacetQuery(facetConfig, params, queryEmbedding);
+
+    // Should filter by embeddings
+    expect(sql).toContain('embeddings IS NOT NULL');
+    expect(sql).toContain('list_dot_product(embeddings,');
+    expect(sql).toContain('ARRAY[0.1');
+    expect(sql).toContain('filtered_data');
+  });
+
+  it('should handle semantic search with custom threshold', () => {
+    const facetConfig: FieldConfig = {
+      field: 'resource_class',
+      label: 'Resource Class',
+      isArray: true,
+      facetable: true,
+      displayOnCard: false,
+      displayOnItem: true,
+    };
+    const params: SearchParams = { q: 'test' };
+    const queryEmbedding = new Float32Array([0.5, 0.5]);
+    const userThreshold = 0.8;
+    const sql = buildFacetQuery(facetConfig, params, queryEmbedding, userThreshold);
+
+    // Should use custom threshold
+    expect(sql).toContain('>= 0.8');
+    expect(sql).toContain('list_dot_product(embeddings,');
+  });
+
+  it('should combine semantic search with bbox filter', () => {
+    const facetConfig: FieldConfig = {
+      field: 'location',
+      label: 'Place',
+      isArray: true,
+      facetable: true,
+      displayOnCard: false,
+      displayOnItem: true,
+    };
+    const params: SearchParams = {
+      q: 'test',
+      bbox: '-122,37,-121,38',
+    };
+    const queryEmbedding = new Float32Array([0.1, 0.2]);
+    const sql = buildFacetQuery(facetConfig, params, queryEmbedding);
+
+    // Should include both filters
+    expect(sql).toContain('ST_Intersects');
+    expect(sql).toContain('list_dot_product(embeddings,');
+    expect(sql).toContain('embeddings IS NOT NULL');
+  });
+});
+
+describe('buildSemanticSearchQuery', () => {
+  it('should build basic semantic search query', () => {
+    const params: SearchParams = { q: 'test' };
+    const queryEmbedding = new Float32Array([0.1, 0.2, 0.3]);
+    const sql = buildSemanticSearchQuery(params, queryEmbedding, 1);
+
+    expect(sql).toContain('SELECT');
+    expect(sql).toContain('list_dot_product(embeddings,');
+    expect(sql).toContain('ARRAY[0.1');
+    expect(sql).toContain('embeddings IS NOT NULL');
+    expect(sql).toContain('similarity');
+    expect(sql).toContain('ORDER BY similarity DESC');
+    expect(sql).toContain('LIMIT');
+    expect(sql).toContain('OFFSET');
+  });
+
+  it('should include bbox filter in semantic search', () => {
+    const params: SearchParams = { q: 'test', bbox: '-122,37,-121,38' };
+    const queryEmbedding = new Float32Array([0.5, 0.5]);
+    const sql = buildSemanticSearchQuery(params, queryEmbedding, 1);
+
+    expect(sql).toContain('ST_Intersects');
+    expect(sql).toContain('POLYGON');
+    expect(sql).toContain('ratio');
+    expect(sql).toContain('ORDER BY similarity DESC, ratio ASC');
+  });
+
+  it('should include facet filters in semantic search', () => {
+    const params: SearchParams = {
+      q: 'test',
+      provider: 'Stanford',
+      resource_class: 'Maps',
+    };
+    const queryEmbedding = new Float32Array([0.1, 0.2]);
+    const sql = buildSemanticSearchQuery(params, queryEmbedding, 1);
+
+    expect(sql).toContain('provider IN');
+    expect(sql).toContain('list_contains(resource_class,');
+    expect(sql).toContain('Stanford');
+    expect(sql).toContain('Maps');
+  });
+
+  it('should use custom similarity threshold', () => {
+    const params: SearchParams = { q: 'test' };
+    const queryEmbedding = new Float32Array([0.5, 0.5]);
+    const userThreshold = 0.9;
+    const sql = buildSemanticSearchQuery(params, queryEmbedding, 1, false, userThreshold);
+
+    expect(sql).toContain('similarity >= 0.9');
+  });
+
+  it('should build count query for semantic search', () => {
+    const params: SearchParams = { q: 'test' };
+    const queryEmbedding = new Float32Array([0.1, 0.2]);
+    const sql = buildSemanticSearchQuery(params, queryEmbedding, 1, true);
+
+    expect(sql).toContain('SELECT COUNT(*)');
+    expect(sql).toContain('list_dot_product(embeddings,');
+    expect(sql).toContain('similarity >=');
+    expect(sql).not.toContain('LIMIT');
+    expect(sql).not.toContain('OFFSET');
+  });
+
+  it('should include count query filters', () => {
+    const params: SearchParams = {
+      q: 'test',
+      provider: 'Stanford',
+    };
+    const queryEmbedding = new Float32Array([0.5, 0.5]);
+    const sql = buildSemanticSearchQuery(params, queryEmbedding, 1, true);
+
+    expect(sql).toContain('COUNT(*)');
+    expect(sql).toContain('provider IN');
+    expect(sql).toContain('embeddings IS NOT NULL');
+  });
+
+  it('should escape SQL in semantic search filters', () => {
+    const params: SearchParams = {
+      q: 'test',
+      provider: "O'Brien",
+    };
+    const queryEmbedding = new Float32Array([0.1, 0.2]);
+    const sql = buildSemanticSearchQuery(params, queryEmbedding, 1);
+
+    expect(sql).toContain("O''Brien");
+  });
+
+  it('should handle multiple array facet filters', () => {
+    const params: SearchParams = {
+      q: 'test',
+      resource_class: 'Maps,Datasets',
+      theme: 'Environment',
+    };
+    const queryEmbedding = new Float32Array([0.5, 0.5]);
+    const sql = buildSemanticSearchQuery(params, queryEmbedding, 1);
+
+    expect(sql).toContain('list_contains(resource_class,');
+    expect(sql).toContain('Maps');
+    expect(sql).toContain('Datasets');
+    expect(sql).toContain('list_contains(theme,');
+    expect(sql).toContain('Environment');
+  });
+
+  it('should handle pagination', () => {
+    const params: SearchParams = { q: 'test' };
+    const queryEmbedding = new Float32Array([0.1, 0.2]);
+    const sql = buildSemanticSearchQuery(params, queryEmbedding, 3);
+
+    // Page 3 should have OFFSET 20 (10 per page * 2)
+    expect(sql).toContain('LIMIT 10');
+    expect(sql).toContain('OFFSET 20');
   });
 });

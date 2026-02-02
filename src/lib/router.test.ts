@@ -61,6 +61,13 @@ describe('parseHash', () => {
     expect(typeof route.query.page).toBe('number');
   });
 
+  it('should convert threshold parameter to float', () => {
+    window.location.hash = '#/search?threshold=0.75';
+    const route = parseHash();
+    expect(route.query.threshold).toBe(0.75);
+    expect(typeof route.query.threshold).toBe('number');
+  });
+
   it('should handle empty hash', () => {
     window.location.hash = '';
     const route = parseHash();

@@ -3,6 +3,7 @@ import {
   normalizeVector,
   embeddingToSqlArray,
   cosineSimilarity,
+  tokenizeSentencePiece,
 } from './embeddings';
 
 describe('normalizeVector', () => {
@@ -36,6 +37,26 @@ describe('normalizeVector', () => {
     expect(normalized[0]).toBeCloseTo(1.0);
     expect(normalized[1]).toBeCloseTo(0.0);
     expect(normalized[2]).toBeCloseTo(0.0);
+  });
+
+  it('should handle vector with NaN values', () => {
+    const vector = new Float32Array([1, NaN, 3]);
+    const normalized = normalizeVector(vector);
+
+    // Should return zero vector for invalid input
+    expect(normalized[0]).toBe(0);
+    expect(normalized[1]).toBe(0);
+    expect(normalized[2]).toBe(0);
+  });
+
+  it('should handle vector with Infinity values', () => {
+    const vector = new Float32Array([1, Infinity, 3]);
+    const normalized = normalizeVector(vector);
+
+    // Should return zero vector for invalid input
+    expect(normalized[0]).toBe(0);
+    expect(normalized[1]).toBe(0);
+    expect(normalized[2]).toBe(0);
   });
 });
 
@@ -99,6 +120,66 @@ describe('cosineSimilarity', () => {
     const b = new Float32Array([1, 0, 0]);
 
     expect(() => cosineSimilarity(a, b)).toThrow('Vectors must have the same dimension');
+  });
+});
+
+describe('tokenizeSentencePiece', () => {
+  it('should tokenize text with word boundary markers', () => {
+    const vocab = {
+      '▁hello': 1,
+      '▁world': 2,
+    };
+    const tokens = tokenizeSentencePiece('hello world', vocab);
+
+    expect(tokens).toEqual([1, 2]);
+  });
+
+  it('should handle lowercase normalization', () => {
+    const vocab = {
+      '▁hello': 1,
+      '▁world': 2,
+    };
+    const tokens = tokenizeSentencePiece('HELLO WORLD', vocab);
+
+    expect(tokens).toEqual([1, 2]);
+  });
+
+  it('should fall back to word without prefix', () => {
+    const vocab = {
+      hello: 1,
+      '▁world': 2,
+    };
+    const tokens = tokenizeSentencePiece('hello world', vocab);
+
+    expect(tokens).toEqual([1, 2]);
+  });
+
+  it('should skip unknown tokens', () => {
+    const vocab = {
+      '▁hello': 1,
+    };
+    const tokens = tokenizeSentencePiece('hello unknown world', vocab);
+
+    expect(tokens).toEqual([1]);
+  });
+
+  it('should handle empty text', () => {
+    const vocab = {
+      '▁hello': 1,
+    };
+    const tokens = tokenizeSentencePiece('', vocab);
+
+    expect(tokens).toEqual([]);
+  });
+
+  it('should handle multiple spaces', () => {
+    const vocab = {
+      '▁hello': 1,
+      '▁world': 2,
+    };
+    const tokens = tokenizeSentencePiece('hello   world', vocab);
+
+    expect(tokens).toEqual([1, 2]);
   });
 });
 
