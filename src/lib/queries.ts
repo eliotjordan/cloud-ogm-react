@@ -2,8 +2,17 @@ import type { SearchParams, FieldConfig } from '@/types';
 import { parseBbox, bboxToWkt, isValidBbox } from '@/utils/spatial';
 import { escapeSqlString } from '@/utils/format';
 import { getPaginationSql } from '@/utils/pagination';
+import { embeddingToSqlArray } from '@/utils/embeddings';
 import { MAX_FACET_VALUES } from '@/lib/constants';
 import { getFacetableFields, getCardFields } from '@/lib/fieldsConfig';
+
+/**
+ * Minimum cosine similarity threshold for semantic search results
+ * Results below this threshold are considered irrelevant
+ * Range: 0.0 (no similarity) to 1.0 (identical)
+ * Typical threshold: 0.3-0.5 for general relevance
+ */
+const SEMANTIC_SIMILARITY_THRESHOLD = 0.3;
 
 /**
  * Get list of fields needed for search queries
@@ -113,21 +122,141 @@ export function buildSearchQuery(
 }
 
 /**
+ * Build SQL query for semantic search using embeddings
+ * Uses cosine similarity to rank results by relevance
+ */
+export function buildSemanticSearchQuery(
+  params: SearchParams,
+  queryEmbedding: Float32Array,
+  page: number,
+  countOnly: boolean = false
+): string {
+  const whereClauses: string[] = [];
+
+  // Check if we have a bbox for ratio calculation
+  const bbox = params.bbox ? parseBbox(params.bbox) : null;
+  const hasBbox = !!(bbox && isValidBbox(bbox));
+  let polygon = '';
+  if (hasBbox && bbox) {
+    polygon = bboxToWkt(bbox);
+  }
+
+  // Geographic filter
+  if (hasBbox) {
+    whereClauses.push(
+      `ST_Intersects(geometry, '${polygon}'::GEOMETRY)`
+    );
+  }
+
+  // Facet filters
+  const facetFields = [
+    'location',
+    'provider',
+    'access_rights',
+    'resource_class',
+    'resource_type',
+    'theme',
+  ];
+
+  facetFields.forEach((field) => {
+    if (params[field]) {
+      const values = String(params[field]).split(',');
+      const escapedValues = values.map((v) => `'${escapeSqlString(v)}'`);
+
+      if (field === 'provider' || field === 'access_rights') {
+        // Scalar fields
+        whereClauses.push(`${field} IN (${escapedValues.join(', ')})`);
+      } else {
+        // Array fields
+        const conditions = escapedValues.map(
+          (v) => `list_contains(${field}, ${v})`
+        );
+        whereClauses.push(`(${conditions.join(' OR ')})`);
+      }
+    }
+  });
+
+  // Filter out documents without embeddings
+  whereClauses.push('embeddings IS NOT NULL');
+
+  const whereClause =
+    whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+  // Convert query embedding to SQL array (needed for both count and results)
+  const queryEmbeddingSql = embeddingToSqlArray(queryEmbedding);
+
+  if (countOnly) {
+    // For semantic search, count only documents above a similarity threshold
+    // This gives a more accurate count of "relevant" results
+    const similarityThreshold = SEMANTIC_SIMILARITY_THRESHOLD; // Minimum similarity score to be considered relevant
+
+    return `
+      SELECT COUNT(*) FROM (
+        SELECT list_dot_product(embeddings, ${queryEmbeddingSql}) as similarity
+        FROM parquet_data
+        ${whereClause}
+      ) WHERE similarity >= ${similarityThreshold}
+    `;
+  }
+
+  // Build SELECT clause with specific fields and similarity score
+  const searchFields = getSearchFields();
+  let selectClause = searchFields.join(', ');
+
+  // Calculate cosine similarity using list_dot_product
+  // Note: Embeddings in Parquet are already normalized
+  selectClause += `, list_dot_product(embeddings, ${queryEmbeddingSql}) as similarity`;
+
+  // Add ratio calculation if bbox exists
+  if (hasBbox) {
+    selectClause += `, ST_Area(geometry) / ST_Area(ST_Intersection(geometry, '${polygon}'::GEOMETRY)) as ratio`;
+  }
+
+  const { limit, offset } = getPaginationSql(page);
+
+  // Similarity threshold to filter out irrelevant results
+  const similarityThreshold = 0.3;
+
+  // Order by similarity (descending), then by bbox ratio if applicable
+  const orderBy = hasBbox
+    ? 'ORDER BY similarity DESC, ratio ASC'
+    : 'ORDER BY similarity DESC';
+
+  // Use a subquery to filter by similarity threshold
+  return `
+    SELECT * FROM (
+      SELECT ${selectClause}
+      FROM parquet_data
+      ${whereClause}
+    ) subquery
+    WHERE similarity >= ${similarityThreshold}
+    ${orderBy}
+    LIMIT ${limit} OFFSET ${offset}
+  `;
+}
+
+/**
  * Build SQL query for facet aggregation
+ * Optionally filters by semantic similarity if queryEmbedding is provided
  */
 export function buildFacetQuery(
   facetConfig: FieldConfig,
-  params: SearchParams
+  params: SearchParams,
+  queryEmbedding?: Float32Array
 ): string {
   const whereClauses: string[] = [];
 
   // Apply same filters as main query (except the facet's own filter)
-  if (params.q) {
+  // Only apply text search in text mode
+  if (params.q && params.mode !== 'semantic') {
     const escaped = escapeSqlString(params.q);
     whereClauses.push(
       `(title ILIKE '%${escaped}%')`
     );
   }
+
+  // For semantic search, filter by similarity threshold
+  const useSemanticFilter = params.mode === 'semantic' && queryEmbedding;
 
   if (params.bbox) {
     const bbox = parseBbox(params.bbox);
@@ -166,27 +295,53 @@ export function buildFacetQuery(
     }
   });
 
+  // Add embeddings filter for semantic search
+  if (useSemanticFilter) {
+    whereClauses.push('embeddings IS NOT NULL');
+  }
+
   const whereClause =
     whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+  // Build base table source
+  let fromClause = 'parquet_data';
+
+  // For semantic search, wrap in a subquery that filters by similarity
+  if (useSemanticFilter && queryEmbedding) {
+    const queryEmbeddingSql = embeddingToSqlArray(queryEmbedding);
+    const similarityThreshold = SEMANTIC_SIMILARITY_THRESHOLD;
+
+    fromClause = `(
+      SELECT *
+      FROM parquet_data
+      ${whereClause}
+      AND list_dot_product(embeddings, ${queryEmbeddingSql}) >= ${similarityThreshold}
+    ) as filtered_data`;
+
+    // Clear whereClause since filters are now in the subquery
+    // (except for the facet's own filter which we don't apply)
+  }
 
   // Build aggregation query
   if (facetConfig.isArray) {
     // Array fields need UNNEST
+    const finalWhere = useSemanticFilter ? '' : whereClause;
     return `
       SELECT unnested_value as value, COUNT(*) as count
-      FROM parquet_data
+      FROM ${fromClause}
       CROSS JOIN UNNEST(${facetConfig.field}) as t(unnested_value)
-      ${whereClause}
+      ${finalWhere}
       GROUP BY unnested_value
       ORDER BY count DESC
       LIMIT ${MAX_FACET_VALUES}
     `;
   } else {
     // Scalar fields
+    const finalWhere = useSemanticFilter ? '' : whereClause;
     return `
       SELECT ${facetConfig.field} as value, COUNT(*) as count
-      FROM parquet_data
-      ${whereClause}
+      FROM ${fromClause}
+      ${finalWhere}
       GROUP BY ${facetConfig.field}
       ORDER BY count DESC, ${facetConfig.field} ASC
       LIMIT ${MAX_FACET_VALUES}

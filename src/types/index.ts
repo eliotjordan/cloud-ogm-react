@@ -95,6 +95,7 @@ export interface SearchParams {
   q?: string;
   bbox?: string;
   page?: number;
+  mode?: 'text' | 'semantic'; // Search mode: text (default) or semantic
   [key: string]: string | number | undefined;
 }
 

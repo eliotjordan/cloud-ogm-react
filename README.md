@@ -5,6 +5,7 @@ A production-ready React + TypeScript application for searching and discovering 
 ## Features
 
 - **Client-side search**: DuckDB-WASM powers SQL queries directly in the browser
+- **Semantic search**: AI-powered search by meaning using distilled embeddings
 - **Geospatial discovery**: Interactive maps with Leaflet and OpenLayers
 - **Advanced filtering**: Faceted search with dynamic filter counts
 - **Multiple viewers**: IIIF, WMS, COG, and PMTiles support
@@ -18,6 +19,7 @@ A production-ready React + TypeScript application for searching and discovering 
 - **Vite** for build tooling
 - **Tailwind CSS** for styling
 - **DuckDB-WASM** for client-side analytics
+- **Custom tokenizer** for semantic search embeddings
 - **Leaflet & OpenLayers** for maps
 - **Vitest** for unit/integration tests
 - **Playwright** for E2E tests

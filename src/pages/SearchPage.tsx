@@ -7,10 +7,11 @@ import { FacetPanel } from '@/components/search/FacetPanel';
 import { ActiveFilters } from '@/components/search/ActiveFilters';
 import { ResultsGrid } from '@/components/search/ResultsGrid';
 import { Pagination } from '@/components/search/Pagination';
-import { buildSearchQuery, buildFacetQuery } from '@/lib/queries';
+import { buildSearchQuery, buildSemanticSearchQuery, buildFacetQuery } from '@/lib/queries';
 import { getFacetableFields } from '@/lib/fieldsConfig';
 import { calculatePagination } from '@/utils/pagination';
 import { useQueryHistory } from '@/hooks/useQueryHistory';
+import { useEmbeddings } from '@/hooks/useEmbeddings';
 
 const facetsConfig = getFacetableFields();
 
@@ -31,9 +32,12 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
   const [loadedFacets, setLoadedFacets] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
   const { addQuery, clearQueries } = useQueryHistory();
+  const { model, isLoading: isLoadingModel, generateEmbedding } = useEmbeddings();
 
   const currentPage = query.page || 1;
   const pagination = calculatePagination(currentPage, totalResults);
+  const searchMode = query.mode || 'text';
+  const semanticSearchAvailable = !isLoadingModel && model !== null;
 
   // Initialize expanded state based on selected values
   useEffect(() => {
@@ -54,11 +58,37 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
         const overallStart = performance.now();
 
         // Build and execute main search query
-        const searchSql = buildSearchQuery(query, currentPage);
+        let searchSql: string;
+
+        // Use semantic search if mode is semantic and we have a query
+        if (searchMode === 'semantic' && query.q && semanticSearchAvailable) {
+          const queryEmbedding = generateEmbedding(query.q);
+
+          // Validate embedding is not null and doesn't contain NaN/zero values
+          const isValidEmbedding = queryEmbedding &&
+            queryEmbedding.length > 0 &&
+            !Array.from(queryEmbedding).every(v => v === 0) &&
+            Array.from(queryEmbedding).every(v => !isNaN(v) && isFinite(v));
+
+          if (!isValidEmbedding) {
+            console.warn('Invalid query embedding generated, falling back to text search');
+            // Fall back to text search
+            searchSql = buildSearchQuery(query, currentPage);
+          } else {
+            searchSql = buildSemanticSearchQuery(query, queryEmbedding, currentPage);
+          }
+        } else {
+          searchSql = buildSearchQuery(query, currentPage);
+        }
+
         const queryStart = performance.now();
         const searchResult = await conn.query(searchSql);
         const queryEnd = performance.now();
-        addQuery('Search Query', searchSql, queryEnd - queryStart);
+        addQuery(
+          searchMode === 'semantic' ? 'Semantic Search Query' : 'Search Query',
+          searchSql,
+          queryEnd - queryStart
+        );
 
         // Parse results
         const records: MetadataRecord[] = [];
@@ -73,7 +103,25 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
         }
 
         // Get total count
-        const countSql = buildSearchQuery(query, currentPage, true);
+        let countSql: string;
+        if (searchMode === 'semantic' && query.q && semanticSearchAvailable) {
+          const queryEmbedding = generateEmbedding(query.q);
+
+          // Validate embedding
+          const isValidEmbedding = queryEmbedding &&
+            queryEmbedding.length > 0 &&
+            !Array.from(queryEmbedding).every(v => v === 0) &&
+            Array.from(queryEmbedding).every(v => !isNaN(v) && isFinite(v));
+
+          if (!isValidEmbedding) {
+            countSql = buildSearchQuery(query, currentPage, true);
+          } else {
+            countSql = buildSemanticSearchQuery(query, queryEmbedding, currentPage, true);
+          }
+        } else {
+          countSql = buildSearchQuery(query, currentPage, true);
+        }
+
         const countStart = performance.now();
         const countResult = await conn.query(countSql);
         const countEnd = performance.now();
@@ -100,7 +148,7 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
     }
 
     executeSearch();
-  }, [conn, query, currentPage, onQueryTime, addQuery, clearQueries]);
+  }, [conn, query, currentPage, onQueryTime, addQuery, clearQueries, searchMode, semanticSearchAvailable, generateEmbedding]);
 
   // Load facet data when a facet is expanded
   useEffect(() => {
@@ -112,8 +160,29 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
       if (facetsToLoad.length === 0) return;
 
       try {
+        // Generate query embedding for semantic search mode
+        let queryEmbedding: Float32Array | null = null;
+        if (searchMode === 'semantic' && query.q && semanticSearchAvailable) {
+          queryEmbedding = generateEmbedding(query.q);
+
+          // Validate embedding
+          const isValidEmbedding = queryEmbedding &&
+            queryEmbedding.length > 0 &&
+            !Array.from(queryEmbedding).every(v => v === 0) &&
+            Array.from(queryEmbedding).every(v => !isNaN(v) && isFinite(v));
+
+          if (!isValidEmbedding) {
+            queryEmbedding = null;
+          }
+        }
+
         const facetPromises = facetsToLoad.map(async (facetConfig) => {
-          const facetSql = buildFacetQuery(facetConfig, query);
+          // Pass query embedding to buildFacetQuery for semantic filtering
+          const facetSql = buildFacetQuery(
+            facetConfig,
+            query,
+            queryEmbedding || undefined
+          );
           const facetStart = performance.now();
           const facetResult = await conn.query(facetSql);
           const facetEnd = performance.now();
@@ -151,7 +220,7 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
     }
 
     loadExpandedFacets();
-  }, [conn, query, expandedFacets, loadedFacets, addQuery]);
+  }, [conn, query, expandedFacets, loadedFacets, addQuery, searchMode, semanticSearchAvailable, generateEmbedding]);
 
   function handleToggleFacet(field: string) {
     setExpandedFacets((prev) => ({
@@ -171,7 +240,7 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
       </div>
 
       {/* Search Header */}
-      <SearchHeader query={query} />
+      <SearchHeader query={query} semanticSearchAvailable={semanticSearchAvailable} />
 
       {/* Active Filters */}
       <ActiveFilters query={query} facetsConfig={facetsConfig} />

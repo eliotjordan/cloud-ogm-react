@@ -5,17 +5,24 @@ import type { SearchParams } from '@/types';
 
 interface SearchHeaderProps {
   query: SearchParams;
+  semanticSearchAvailable?: boolean;
 }
 
 /**
  * Search header with location and text search inputs
  */
-export function SearchHeader({ query }: SearchHeaderProps) {
+export function SearchHeader({ query, semanticSearchAvailable = false }: SearchHeaderProps) {
   const [searchQuery, setSearchQuery] = useState(query.q || '');
+  const searchMode = query.mode || 'text';
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     updateSearchParams({ q: searchQuery || undefined, page: 1 });
+  }
+
+  function handleToggleMode() {
+    const newMode = searchMode === 'text' ? 'semantic' : 'text';
+    updateSearchParams({ mode: newMode, page: 1 });
   }
 
   return (
@@ -49,7 +56,11 @@ export function SearchHeader({ query }: SearchHeaderProps) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for maps, data, imagery..."
+              placeholder={
+                searchMode === 'semantic'
+                  ? 'Describe what you\'re looking for...'
+                  : 'Search for maps, data, imagery...'
+              }
               className="input pl-10 w-full"
               aria-label="Search query"
             />
@@ -61,6 +72,50 @@ export function SearchHeader({ query }: SearchHeaderProps) {
           </button>
         </div>
       </form>
+
+      {/* Search Mode Toggle */}
+      {semanticSearchAvailable && (
+        <div className="mt-3 flex items-center gap-2">
+          <span className="text-sm text-gray-600 dark:text-gray-400">
+            Search mode:
+          </span>
+          <button
+            type="button"
+            onClick={handleToggleMode}
+            className={`
+              px-3 py-1 text-sm rounded-md transition-colors
+              ${
+                searchMode === 'text'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+              }
+            `}
+            aria-pressed={searchMode === 'text'}
+          >
+            Text
+          </button>
+          <button
+            type="button"
+            onClick={handleToggleMode}
+            className={`
+              px-3 py-1 text-sm rounded-md transition-colors
+              ${
+                searchMode === 'semantic'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+              }
+            `}
+            aria-pressed={searchMode === 'semantic'}
+          >
+            Semantic
+          </button>
+          {searchMode === 'semantic' && (
+            <span className="text-xs text-gray-500 dark:text-gray-500 ml-2">
+              AI-powered search by meaning
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

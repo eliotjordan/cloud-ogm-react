@@ -118,15 +118,16 @@ export function toggleFilter(
 }
 
 /**
- * Clear all filters but keep query and bbox
+ * Clear all filters but keep query, bbox, and mode
  */
 export function clearFilters(): void {
   const current = parseHash();
-  const { q, bbox } = current.query;
+  const { q, bbox, mode } = current.query;
 
   const cleaned: SearchParams = {};
   if (q) cleaned.q = q;
   if (bbox) cleaned.bbox = bbox;
+  if (mode) cleaned.mode = mode as 'text' | 'semantic';
 
   const url = buildSearchUrl(cleaned);
   window.location.hash = url;
