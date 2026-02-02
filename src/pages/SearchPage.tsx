@@ -7,6 +7,7 @@ import { FacetPanel } from '@/components/search/FacetPanel';
 import { ActiveFilters } from '@/components/search/ActiveFilters';
 import { ResultsGrid } from '@/components/search/ResultsGrid';
 import { Pagination } from '@/components/search/Pagination';
+import { Spinner } from '@/components/Spinner';
 import { buildSearchQuery, buildSemanticSearchQuery, buildFacetQuery } from '@/lib/queries';
 import { getFacetableFields } from '@/lib/fieldsConfig';
 import { calculatePagination } from '@/utils/pagination';
@@ -310,8 +311,8 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
           )}
 
           {isLoading ? (
-            <div className="card p-12 text-center">
-              <p className="text-lg text-gray-600 dark:text-gray-400">Loading results...</p>
+            <div className="card">
+              <Spinner message="Loading results..." />
             </div>
           ) : results.length === 0 ? (
             <div className="card p-12 text-center">
