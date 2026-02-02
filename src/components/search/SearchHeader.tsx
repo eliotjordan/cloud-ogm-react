@@ -111,7 +111,7 @@ export function SearchHeader({ query, semanticSearchAvailable = false }: SearchH
               <span className="text-xs text-gray-500 dark:text-gray-500">
                 {manualThresholdEnabled
                   ? `Current: ${thresholdValue.toFixed(2)}`
-                  : 'Default (0.50)'}
+                  : ''}
               </span>
             </div>
 
