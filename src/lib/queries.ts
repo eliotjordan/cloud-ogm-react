@@ -353,11 +353,16 @@ export function buildFacetQuery(
   if (facetConfig.isArray) {
     // Array fields need UNNEST
     const finalWhere = useSemanticFilter ? '' : whereClause;
+    // Filter out NULL and empty string values
+    const blankFilter = finalWhere
+      ? `${finalWhere} AND unnested_value IS NOT NULL AND unnested_value != ''`
+      : `WHERE unnested_value IS NOT NULL AND unnested_value != ''`;
+
     return `
       SELECT unnested_value as value, COUNT(*) as count
       FROM ${fromClause}
       CROSS JOIN UNNEST(${facetConfig.field}) as t(unnested_value)
-      ${finalWhere}
+      ${blankFilter}
       GROUP BY unnested_value
       ORDER BY count DESC
       LIMIT ${MAX_FACET_VALUES}
@@ -365,10 +370,15 @@ export function buildFacetQuery(
   } else {
     // Scalar fields
     const finalWhere = useSemanticFilter ? '' : whereClause;
+    // Filter out NULL and empty string values
+    const blankFilter = finalWhere
+      ? `${finalWhere} AND ${facetConfig.field} IS NOT NULL AND ${facetConfig.field} != ''`
+      : `WHERE ${facetConfig.field} IS NOT NULL AND ${facetConfig.field} != ''`;
+
     return `
       SELECT ${facetConfig.field} as value, COUNT(*) as count
       FROM ${fromClause}
-      ${finalWhere}
+      ${blankFilter}
       GROUP BY ${facetConfig.field}
       ORDER BY count DESC, ${facetConfig.field} ASC
       LIMIT ${MAX_FACET_VALUES}
