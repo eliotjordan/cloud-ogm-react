@@ -103,13 +103,9 @@ export function SearchMap({ results, query }: SearchMapProps) {
 
       bboxRectRef.current = rectangle;
 
-      // Zoom to bbox with one level out
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (map.fitBounds(bounds) as any).programmatic = true;
-      const currentZoom = map.getZoom();
-      map.setZoom(currentZoom - 1);
-
+      // Fit bounds to bbox (marking as programmatic to avoid triggering "Search Here")
       userMovedMap.current = false;
+      map.fitBounds(bounds, { padding: [20, 20] });
       setShowSearchHere(false);
     }
   }, [query.bbox]);

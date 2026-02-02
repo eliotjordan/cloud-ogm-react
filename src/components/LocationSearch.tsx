@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { buildSearchUrl, navigate } from '@/lib/router';
+import { updateSearchParams } from '@/lib/router';
 import { formatBboxParam } from '@/utils/spatial';
 import type { NominatimPlace, BBox } from '@/types';
 import {
@@ -79,8 +79,8 @@ export function LocationSearch() {
     const [south, north, west, east] = place.boundingbox.map(Number);
     const bbox: BBox = { north, south, east, west };
 
-    const url = buildSearchUrl({ bbox: formatBboxParam(bbox) });
-    navigate(url);
+    // Update bbox while preserving other filters
+    updateSearchParams({ bbox: formatBboxParam(bbox), page: 1 });
 
     setInputValue('');
     setResults([]);
