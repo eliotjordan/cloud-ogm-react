@@ -484,4 +484,111 @@ describe('buildSemanticSearchQuery', () => {
     expect(sql).toContain('LIMIT 10');
     expect(sql).toContain('OFFSET 20');
   });
+
+  it('should handle semantic search without query text', () => {
+    const params: SearchParams = { provider: 'Stanford' };
+    const queryEmbedding = new Float32Array([0.5, 0.5]);
+    const sql = buildSemanticSearchQuery(params, queryEmbedding, 1);
+
+    // Should still work without q parameter
+    expect(sql).toContain('list_dot_product(embeddings,');
+    expect(sql).toContain('provider IN');
+    expect(sql).toContain('similarity');
+  });
+
+  it('should build count query without query text', () => {
+    const params: SearchParams = { bbox: '-122,37,-121,38' };
+    const queryEmbedding = new Float32Array([0.1, 0.2]);
+    const sql = buildSemanticSearchQuery(params, queryEmbedding, 1, true);
+
+    expect(sql).toContain('SELECT COUNT(*)');
+    expect(sql).toContain('ST_Intersects');
+    expect(sql).toContain('similarity >=');
+  });
+
+  it('should handle semantic search with no filters at all', () => {
+    const params: SearchParams = {};
+    const queryEmbedding = new Float32Array([0.5, 0.5]);
+    const sql = buildSemanticSearchQuery(params, queryEmbedding, 1);
+
+    // Should have minimal WHERE clause - just embeddings IS NOT NULL
+    expect(sql).toContain('embeddings IS NOT NULL');
+    expect(sql).toContain('list_dot_product(embeddings,');
+    expect(sql).toContain('similarity');
+  });
+});
+
+describe('buildFacetQuery - scalar fields', () => {
+  it('should handle scalar field facet query', () => {
+    const facetConfig: FieldConfig = {
+      field: 'provider',
+      label: 'Provider',
+      isArray: false,
+      facetable: true,
+      displayOnCard: false,
+      displayOnItem: true,
+    };
+    const params: SearchParams = { q: 'test' };
+    const sql = buildFacetQuery(facetConfig, params);
+
+    expect(sql).toContain('SELECT provider as value');
+    expect(sql).toContain('COUNT(*) as count');
+    expect(sql).toContain('GROUP BY provider');
+    expect(sql).toContain('provider IS NOT NULL');
+    expect(sql).not.toContain('UNNEST');
+  });
+
+  it('should handle scalar field with semantic search', () => {
+    const facetConfig: FieldConfig = {
+      field: 'access_rights',
+      label: 'Access Rights',
+      isArray: false,
+      facetable: true,
+      displayOnCard: false,
+      displayOnItem: true,
+    };
+    const params: SearchParams = { q: 'test' };
+    const queryEmbedding = new Float32Array([0.5, 0.5]);
+    const sql = buildFacetQuery(facetConfig, params, queryEmbedding);
+
+    expect(sql).toContain('SELECT access_rights as value');
+    expect(sql).toContain('filtered_data');
+    expect(sql).toContain('list_dot_product(embeddings,');
+    expect(sql).not.toContain('UNNEST');
+  });
+
+  it('should handle scalar field without filters', () => {
+    const facetConfig: FieldConfig = {
+      field: 'provider',
+      label: 'Provider',
+      isArray: false,
+      facetable: true,
+      displayOnCard: false,
+      displayOnItem: true,
+    };
+    const params: SearchParams = {};
+    const sql = buildFacetQuery(facetConfig, params);
+
+    expect(sql).toContain('WHERE provider IS NOT NULL');
+    expect(sql).toContain("provider != ''");
+    expect(sql).toContain('GROUP BY provider');
+  });
+
+  it('should handle scalar field semantic search without query text', () => {
+    const facetConfig: FieldConfig = {
+      field: 'provider',
+      label: 'Provider',
+      isArray: false,
+      facetable: true,
+      displayOnCard: false,
+      displayOnItem: true,
+    };
+    const params: SearchParams = {};
+    const queryEmbedding = new Float32Array([0.1, 0.2, 0.3]);
+    const sql = buildFacetQuery(facetConfig, params, queryEmbedding);
+
+    expect(sql).toContain('SELECT provider as value');
+    expect(sql).toContain('filtered_data');
+    expect(sql).toContain('list_dot_product(embeddings,');
+  });
 });

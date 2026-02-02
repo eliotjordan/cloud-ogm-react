@@ -177,6 +177,20 @@ describe('updateSearchParams', () => {
     const route = parseHash();
     expect(route.query.provider).toBeUndefined();
   });
+
+  it('should keep threshold when set to 0', () => {
+    window.location.hash = '#/search?q=test';
+    updateSearchParams({ threshold: 0 });
+    const route = parseHash();
+    expect(route.query.threshold).toBe(0);
+  });
+
+  it('should remove threshold when undefined', () => {
+    window.location.hash = '#/search?q=test&threshold=0.5';
+    updateSearchParams({ threshold: undefined });
+    const route = parseHash();
+    expect(route.query.threshold).toBeUndefined();
+  });
 });
 
 describe('toggleFilter', () => {
@@ -275,5 +289,32 @@ describe('clearFilters', () => {
     clearFilters();
     const route = parseHash();
     expect(Object.keys(route.query).length).toBe(0);
+  });
+
+  it('should keep threshold when set to 0', () => {
+    window.location.hash = '#/search?q=test&threshold=0&provider=Stanford';
+    clearFilters();
+    const route = parseHash();
+    expect(route.query.q).toBe('test');
+    expect(route.query.threshold).toBe(0);
+    expect(route.query.provider).toBeUndefined();
+  });
+
+  it('should keep threshold when set to non-zero value', () => {
+    window.location.hash = '#/search?q=test&threshold=0.75&provider=Stanford';
+    clearFilters();
+    const route = parseHash();
+    expect(route.query.q).toBe('test');
+    expect(route.query.threshold).toBe(0.75);
+    expect(route.query.provider).toBeUndefined();
+  });
+
+  it('should not add threshold if not present', () => {
+    window.location.hash = '#/search?q=test&provider=Stanford';
+    clearFilters();
+    const route = parseHash();
+    expect(route.query.q).toBe('test');
+    expect(route.query.threshold).toBeUndefined();
+    expect(route.query.provider).toBeUndefined();
   });
 });
