@@ -79,7 +79,7 @@ export function ResultsGrid({ results }: ResultsGridProps) {
                     <span>{result.access_rights}</span>
                   </>
                 )}
-                {result.format && (
+                {result.resource_type && result.resource_type.length > 0 && (
                   <>
                     <span>•</span>
                     <span className="inline-flex items-center gap-1">
@@ -97,7 +97,7 @@ export function ResultsGrid({ results }: ResultsGridProps) {
                           d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
                         />
                       </svg>
-                      {result.format}
+                      {result.resource_type[0]}
                     </span>
                   </>
                 )}
