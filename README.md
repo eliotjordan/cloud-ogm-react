@@ -1,5 +1,8 @@
 # Cloud OpenGeoMetadata React
 
+[![CI](https://github.com/YOUR_USERNAME/cloud-ogm-react/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/cloud-ogm-react/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/YOUR_USERNAME/cloud-ogm-react/branch/main/graph/badge.svg)](https://codecov.io/gh/YOUR_USERNAME/cloud-ogm-react)
+
 A production-ready React + TypeScript application for searching and discovering geospatial metadata from institutions worldwide. Built with DuckDB-WASM for client-side SQL queries on Parquet data.
 
 ## Features
@@ -76,6 +79,40 @@ npm run type-check
 
 ```bash
 npm run lint
+```
+
+## Continuous Integration
+
+This project uses GitHub Actions for continuous integration. The CI pipeline runs automatically on:
+- Push to `main` branch
+- Pull requests to `main` branch
+
+### CI Pipeline Steps
+
+1. **Lint**: Runs ESLint to check code quality
+2. **Type Check**: Validates TypeScript types
+3. **Test**: Runs unit tests with coverage (99%+ coverage)
+4. **Build**: Creates production build
+
+### Coverage Requirements
+
+The project maintains high test coverage standards:
+- **Statements**: 99%
+- **Branches**: 98%
+- **Functions**: 100%
+- **Lines**: 99%
+
+Coverage reports are automatically uploaded to Codecov and archived as artifacts.
+
+### Running CI Locally
+
+To run the same checks as CI before pushing:
+
+```bash
+npm run lint           # ESLint
+npm run type-check     # TypeScript
+npm run test:coverage  # Tests with coverage
+npm run build          # Production build
 ```
 
 ## Project Structure
