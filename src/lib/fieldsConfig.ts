@@ -118,7 +118,7 @@ export const fieldsConfig: FieldConfig[] = [
     label: 'Format',
     isArray: false,
     facetable: true,
-    displayOnCard: false,
+    displayOnCard: true,
     displayOnItem: true,
   },
   {
