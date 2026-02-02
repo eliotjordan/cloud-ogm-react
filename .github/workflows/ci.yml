@@ -45,7 +45,7 @@ jobs:
 
       - name: Archive coverage report
         if: matrix.node-version == '20.x'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-report
           path: coverage/
@@ -73,7 +73,7 @@ jobs:
         run: npm run build
 
       - name: Archive production build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist
           path: dist/
