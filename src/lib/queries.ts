@@ -7,12 +7,35 @@ import { MAX_FACET_VALUES } from '@/lib/constants';
 import { getFacetableFields, getCardFields } from '@/lib/fieldsConfig';
 
 /**
- * Minimum cosine similarity threshold for semantic search results
+ * Default minimum cosine similarity threshold for semantic search results
  * Results below this threshold are considered irrelevant
  * Range: 0.0 (no similarity) to 1.0 (identical)
  * Typical threshold: 0.3-0.5 for general relevance
  */
-const SEMANTIC_SIMILARITY_THRESHOLD = 0.3;
+const DEFAULT_SEMANTIC_SIMILARITY_THRESHOLD = 0.3;
+
+/**
+ * Calculate dynamic similarity threshold based on query characteristics
+ * Shorter queries use stricter thresholds to avoid overly broad results
+ *
+ * @param query - Search query text
+ * @param userThreshold - Optional user-specified threshold override
+ * @returns Similarity threshold value between 0 and 1
+ */
+export function calculateSimilarityThreshold(
+  query: string,
+  userThreshold?: number
+): number {
+  // If user specified a threshold, use it
+  if (userThreshold !== undefined && userThreshold >= 0 && userThreshold <= 1) {
+    return userThreshold;
+  }
+
+  // Dynamic threshold based on query length
+  // Shorter queries (< 10 chars) are often vague, so use stricter threshold
+  const queryLength = query.trim().length;
+  return queryLength < 10 ? 0.4 : DEFAULT_SEMANTIC_SIMILARITY_THRESHOLD;
+}
 
 /**
  * Get list of fields needed for search queries
@@ -129,7 +152,8 @@ export function buildSemanticSearchQuery(
   params: SearchParams,
   queryEmbedding: Float32Array,
   page: number,
-  countOnly: boolean = false
+  countOnly: boolean = false,
+  userThreshold?: number
 ): string {
   const whereClauses: string[] = [];
 
@@ -188,7 +212,10 @@ export function buildSemanticSearchQuery(
   if (countOnly) {
     // For semantic search, count only documents above a similarity threshold
     // This gives a more accurate count of "relevant" results
-    const similarityThreshold = SEMANTIC_SIMILARITY_THRESHOLD; // Minimum similarity score to be considered relevant
+    const similarityThreshold = calculateSimilarityThreshold(
+      params.q || '',
+      userThreshold
+    );
 
     return `
       SELECT COUNT(*) FROM (
@@ -215,7 +242,10 @@ export function buildSemanticSearchQuery(
   const { limit, offset } = getPaginationSql(page);
 
   // Similarity threshold to filter out irrelevant results
-  const similarityThreshold = 0.3;
+  const similarityThreshold = calculateSimilarityThreshold(
+    params.q || '',
+    userThreshold
+  );
 
   // Order by similarity (descending), then by bbox ratio if applicable
   const orderBy = hasBbox
@@ -242,7 +272,8 @@ export function buildSemanticSearchQuery(
 export function buildFacetQuery(
   facetConfig: FieldConfig,
   params: SearchParams,
-  queryEmbedding?: Float32Array
+  queryEmbedding?: Float32Array,
+  userThreshold?: number
 ): string {
   const whereClauses: string[] = [];
 
@@ -309,7 +340,10 @@ export function buildFacetQuery(
   // For semantic search, wrap in a subquery that filters by similarity
   if (useSemanticFilter && queryEmbedding) {
     const queryEmbeddingSql = embeddingToSqlArray(queryEmbedding);
-    const similarityThreshold = SEMANTIC_SIMILARITY_THRESHOLD;
+    const similarityThreshold = calculateSimilarityThreshold(
+      params.q || '',
+      userThreshold
+    );
 
     fromClause = `(
       SELECT *

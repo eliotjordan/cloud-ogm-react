@@ -96,6 +96,7 @@ export interface SearchParams {
   bbox?: string;
   page?: number;
   mode?: 'text' | 'semantic'; // Search mode: text (default) or semantic
+  threshold?: number; // Manual similarity threshold override (0-1)
   [key: string]: string | number | undefined;
 }
 

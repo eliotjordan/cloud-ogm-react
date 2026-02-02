@@ -20,8 +20,14 @@ export function parseHash(): RouteInfo {
   if (queryPart) {
     const params = new URLSearchParams(queryPart);
     params.forEach((value, key) => {
-      // Convert page to number, keep others as strings
-      query[key] = key === 'page' ? parseInt(value, 10) : value;
+      // Convert page to number, threshold to number, keep others as strings
+      if (key === 'page') {
+        query[key] = parseInt(value, 10);
+      } else if (key === 'threshold') {
+        query[key] = parseFloat(value);
+      } else {
+        query[key] = value;
+      }
     });
   }
 
@@ -118,16 +124,17 @@ export function toggleFilter(
 }
 
 /**
- * Clear all filters but keep query, bbox, and mode
+ * Clear all filters but keep query, bbox, mode, and threshold
  */
 export function clearFilters(): void {
   const current = parseHash();
-  const { q, bbox, mode } = current.query;
+  const { q, bbox, mode, threshold } = current.query;
 
   const cleaned: SearchParams = {};
   if (q) cleaned.q = q;
   if (bbox) cleaned.bbox = bbox;
   if (mode) cleaned.mode = mode as 'text' | 'semantic';
+  if (threshold !== undefined) cleaned.threshold = threshold;
 
   const url = buildSearchUrl(cleaned);
   window.location.hash = url;

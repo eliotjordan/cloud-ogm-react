@@ -75,7 +75,13 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
             // Fall back to text search
             searchSql = buildSearchQuery(query, currentPage);
           } else {
-            searchSql = buildSemanticSearchQuery(query, queryEmbedding, currentPage);
+            searchSql = buildSemanticSearchQuery(
+              query,
+              queryEmbedding,
+              currentPage,
+              false,
+              query.threshold
+            );
           }
         } else {
           searchSql = buildSearchQuery(query, currentPage);
@@ -116,7 +122,13 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
           if (!isValidEmbedding) {
             countSql = buildSearchQuery(query, currentPage, true);
           } else {
-            countSql = buildSemanticSearchQuery(query, queryEmbedding, currentPage, true);
+            countSql = buildSemanticSearchQuery(
+              query,
+              queryEmbedding,
+              currentPage,
+              true,
+              query.threshold
+            );
           }
         } else {
           countSql = buildSearchQuery(query, currentPage, true);
@@ -181,7 +193,8 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
           const facetSql = buildFacetQuery(
             facetConfig,
             query,
-            queryEmbedding || undefined
+            queryEmbedding || undefined,
+            query.threshold
           );
           const facetStart = performance.now();
           const facetResult = await conn.query(facetSql);

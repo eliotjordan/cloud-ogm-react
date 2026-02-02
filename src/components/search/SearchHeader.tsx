@@ -14,6 +14,11 @@ interface SearchHeaderProps {
 export function SearchHeader({ query, semanticSearchAvailable = false }: SearchHeaderProps) {
   const [searchQuery, setSearchQuery] = useState(query.q || '');
   const searchMode = query.mode || 'text';
+  const hasManualThreshold = query.threshold !== undefined;
+  const [manualThresholdEnabled, setManualThresholdEnabled] = useState(hasManualThreshold);
+  const [thresholdValue, setThresholdValue] = useState(
+    query.threshold !== undefined ? query.threshold : 0.3
+  );
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -23,6 +28,29 @@ export function SearchHeader({ query, semanticSearchAvailable = false }: SearchH
   function handleToggleMode() {
     const newMode = searchMode === 'text' ? 'semantic' : 'text';
     updateSearchParams({ mode: newMode, page: 1 });
+  }
+
+  function handleToggleManualThreshold() {
+    const newEnabled = !manualThresholdEnabled;
+    setManualThresholdEnabled(newEnabled);
+
+    if (newEnabled) {
+      // Enable manual threshold - set it in URL
+      updateSearchParams({ threshold: thresholdValue, page: 1 });
+    } else {
+      // Disable manual threshold - remove from URL
+      updateSearchParams({ threshold: undefined, page: 1 });
+    }
+  }
+
+  function handleThresholdChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const newValue = parseFloat(e.target.value);
+    setThresholdValue(newValue);
+
+    if (manualThresholdEnabled) {
+      // Update URL immediately as user drags slider
+      updateSearchParams({ threshold: newValue, page: 1 });
+    }
   }
 
   return (
@@ -114,6 +142,54 @@ export function SearchHeader({ query, semanticSearchAvailable = false }: SearchH
               AI-powered search by meaning
             </span>
           )}
+        </div>
+      )}
+
+      {/* Threshold Control - Only show in semantic mode */}
+      {semanticSearchAvailable && searchMode === 'semantic' && (
+        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={manualThresholdEnabled}
+                  onChange={handleToggleManualThreshold}
+                  className="sr-only peer"
+                />
+                <div className="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
+                <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                  Manual threshold
+                </span>
+              </label>
+              <span className="text-xs text-gray-500 dark:text-gray-500">
+                {manualThresholdEnabled
+                  ? `Current: ${thresholdValue.toFixed(2)}`
+                  : 'Auto (based on query length)'}
+              </span>
+            </div>
+
+            {manualThresholdEnabled && (
+              <div className="flex items-center gap-3 flex-1 max-w-xs">
+                <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                  Less relevant
+                </span>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={thresholdValue}
+                  onChange={handleThresholdChange}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-primary-600"
+                  aria-label="Similarity threshold"
+                />
+                <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                  More relevant
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
