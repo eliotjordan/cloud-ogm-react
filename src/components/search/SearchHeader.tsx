@@ -13,7 +13,6 @@ interface SearchHeaderProps {
  */
 export function SearchHeader({ query, semanticSearchAvailable = false }: SearchHeaderProps) {
   const [searchQuery, setSearchQuery] = useState(query.q || '');
-  const searchMode = query.mode || 'text';
   const hasManualThreshold = query.threshold !== undefined;
   const [manualThresholdEnabled, setManualThresholdEnabled] = useState(hasManualThreshold);
   const [thresholdValue, setThresholdValue] = useState(
@@ -23,11 +22,6 @@ export function SearchHeader({ query, semanticSearchAvailable = false }: SearchH
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     updateSearchParams({ q: searchQuery || undefined, page: 1 });
-  }
-
-  function handleToggleMode() {
-    const newMode = searchMode === 'text' ? 'semantic' : 'text';
-    updateSearchParams({ mode: newMode, page: 1 });
   }
 
   function handleToggleManualThreshold() {
@@ -84,11 +78,7 @@ export function SearchHeader({ query, semanticSearchAvailable = false }: SearchH
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={
-                searchMode === 'semantic'
-                  ? 'Describe what you\'re looking for...'
-                  : 'Search for maps, data, imagery...'
-              }
+              placeholder="Search for maps, data, imagery..."
               className="input pl-10 w-full"
               aria-label="Search query"
             />
@@ -101,52 +91,8 @@ export function SearchHeader({ query, semanticSearchAvailable = false }: SearchH
         </div>
       </form>
 
-      {/* Search Mode Toggle */}
-      {semanticSearchAvailable && (
-        <div className="mt-3 flex items-center gap-2">
-          <span className="text-sm text-gray-600 dark:text-gray-400">
-            Search mode:
-          </span>
-          <button
-            type="button"
-            onClick={handleToggleMode}
-            className={`
-              px-3 py-1 text-sm rounded-md transition-colors
-              ${
-                searchMode === 'text'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }
-            `}
-            aria-pressed={searchMode === 'text'}
-          >
-            Text
-          </button>
-          <button
-            type="button"
-            onClick={handleToggleMode}
-            className={`
-              px-3 py-1 text-sm rounded-md transition-colors
-              ${
-                searchMode === 'semantic'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }
-            `}
-            aria-pressed={searchMode === 'semantic'}
-          >
-            Semantic
-          </button>
-          {searchMode === 'semantic' && (
-            <span className="text-xs text-gray-500 dark:text-gray-500 ml-2">
-              AI-powered search by meaning
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Threshold Control - Only show in semantic mode */}
-      {semanticSearchAvailable && searchMode === 'semantic' && (
+      {/* Threshold Control - Only show when semantic search is available and query exists */}
+      {semanticSearchAvailable && query.q && (
         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
@@ -159,7 +105,7 @@ export function SearchHeader({ query, semanticSearchAvailable = false }: SearchH
                 />
                 <div className="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
                 <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                  Manual threshold
+                  Semantic search threshold
                 </span>
               </label>
               <span className="text-xs text-gray-500 dark:text-gray-500">

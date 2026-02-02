@@ -49,3 +49,32 @@ export const OSM_ATTRIBUTION =
 
 export const OSM_TILE_URL =
   'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+/**
+ * Default embedding model configuration
+ * Model files stored in S3 for client-side semantic search
+ */
+export const DEFAULT_MODEL_CONFIG = {
+  tokenizerUrl: 'https://pul-tile-images.s3.us-east-1.amazonaws.com/tokenizer.json',
+  embeddingsUrl: 'https://pul-tile-images.s3.us-east-1.amazonaws.com/embeddings.bin',
+  embeddingDim: 64, // Default dimension, should match model
+};
+
+/**
+ * Default minimum cosine similarity threshold for semantic search results
+ * Results below this threshold are considered irrelevant
+ * Range: 0.0 (no similarity) to 1.0 (identical)
+ * Typical threshold: 0.3-0.5 for general relevance
+ */
+export const DEFAULT_SEMANTIC_SIMILARITY_THRESHOLD = 0.5;
+
+/**
+ * Similarity threshold for short queries (< 10 characters)
+ * Shorter queries are often vague, so use stricter threshold
+ */
+export const SHORT_QUERY_SIMILARITY_THRESHOLD = 0.4;
+
+/**
+ * Query length threshold for determining short vs normal queries
+ */
+export const SHORT_QUERY_LENGTH = 10;

@@ -3,16 +3,13 @@ import { parseBbox, bboxToWkt, isValidBbox } from '@/utils/spatial';
 import { escapeSqlString } from '@/utils/format';
 import { getPaginationSql } from '@/utils/pagination';
 import { embeddingToSqlArray } from '@/utils/embeddings';
-import { MAX_FACET_VALUES } from '@/lib/constants';
+import {
+  MAX_FACET_VALUES,
+  DEFAULT_SEMANTIC_SIMILARITY_THRESHOLD,
+  SHORT_QUERY_SIMILARITY_THRESHOLD,
+  SHORT_QUERY_LENGTH,
+} from '@/lib/constants';
 import { getFacetableFields, getCardFields } from '@/lib/fieldsConfig';
-
-/**
- * Default minimum cosine similarity threshold for semantic search results
- * Results below this threshold are considered irrelevant
- * Range: 0.0 (no similarity) to 1.0 (identical)
- * Typical threshold: 0.3-0.5 for general relevance
- */
-const DEFAULT_SEMANTIC_SIMILARITY_THRESHOLD = 0.3;
 
 /**
  * Calculate dynamic similarity threshold based on query characteristics
@@ -32,9 +29,11 @@ export function calculateSimilarityThreshold(
   }
 
   // Dynamic threshold based on query length
-  // Shorter queries (< 10 chars) are often vague, so use stricter threshold
+  // Shorter queries are often vague, so use stricter threshold
   const queryLength = query.trim().length;
-  return queryLength < 10 ? 0.4 : DEFAULT_SEMANTIC_SIMILARITY_THRESHOLD;
+  return queryLength < SHORT_QUERY_LENGTH
+    ? SHORT_QUERY_SIMILARITY_THRESHOLD
+    : DEFAULT_SEMANTIC_SIMILARITY_THRESHOLD;
 }
 
 /**
@@ -79,7 +78,7 @@ export function buildSearchQuery(
   if (params.q) {
     const escaped = escapeSqlString(params.q);
     whereClauses.push(
-      `(title ILIKE '%${escaped}%')`
+      `(title ILIKE '%${escaped}%' OR id ILIKE '%${escaped}%')`
     );
   }
 
@@ -278,16 +277,16 @@ export function buildFacetQuery(
   const whereClauses: string[] = [];
 
   // Apply same filters as main query (except the facet's own filter)
-  // Only apply text search in text mode
-  if (params.q && params.mode !== 'semantic') {
+  // Only apply text search if not using semantic search
+  if (params.q && !queryEmbedding) {
     const escaped = escapeSqlString(params.q);
     whereClauses.push(
-      `(title ILIKE '%${escaped}%')`
+      `(title ILIKE '%${escaped}%' OR id ILIKE '%${escaped}%')`
     );
   }
 
   // For semantic search, filter by similarity threshold
-  const useSemanticFilter = params.mode === 'semantic' && queryEmbedding;
+  const useSemanticFilter = queryEmbedding !== undefined;
 
   if (params.bbox) {
     const bbox = parseBbox(params.bbox);

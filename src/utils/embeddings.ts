@@ -1,3 +1,5 @@
+import { DEFAULT_MODEL_CONFIG } from '@/lib/constants';
+
 /**
  * Embedding model configuration
  */
@@ -24,13 +26,9 @@ export interface EmbeddingModel {
 }
 
 /**
- * Default S3 URLs for the embedding model
+ * Re-export DEFAULT_MODEL_CONFIG from constants for backwards compatibility
  */
-export const DEFAULT_MODEL_CONFIG: EmbeddingModelConfig = {
-  tokenizerUrl: 'https://pul-tile-images.s3.us-east-1.amazonaws.com/tokenizer.json',
-  embeddingsUrl: 'https://pul-tile-images.s3.us-east-1.amazonaws.com/embeddings.bin',
-  embeddingDim: 64, // Default dimension, should match model
-};
+export { DEFAULT_MODEL_CONFIG };
 
 /**
  * Load the embedding model from remote URLs

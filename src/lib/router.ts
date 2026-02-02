@@ -124,16 +124,15 @@ export function toggleFilter(
 }
 
 /**
- * Clear all filters but keep query, bbox, mode, and threshold
+ * Clear all filters but keep query, bbox, and threshold
  */
 export function clearFilters(): void {
   const current = parseHash();
-  const { q, bbox, mode, threshold } = current.query;
+  const { q, bbox, threshold } = current.query;
 
   const cleaned: SearchParams = {};
   if (q) cleaned.q = q;
   if (bbox) cleaned.bbox = bbox;
-  if (mode) cleaned.mode = mode as 'text' | 'semantic';
   if (threshold !== undefined) cleaned.threshold = threshold;
 
   const url = buildSearchUrl(cleaned);

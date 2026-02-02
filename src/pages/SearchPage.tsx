@@ -36,7 +36,6 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
 
   const currentPage = query.page || 1;
   const pagination = calculatePagination(currentPage, totalResults);
-  const searchMode = query.mode || 'text';
   const semanticSearchAvailable = !isLoadingModel && model !== null;
 
   // Initialize expanded state based on selected values
@@ -59,9 +58,10 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
 
         // Build and execute main search query
         let searchSql: string;
+        let usedSemanticSearch = false;
 
-        // Use semantic search if mode is semantic and we have a query
-        if (searchMode === 'semantic' && query.q && semanticSearchAvailable) {
+        // Try semantic search first if available and we have a query
+        if (semanticSearchAvailable && query.q) {
           const queryEmbedding = generateEmbedding(query.q);
 
           // Validate embedding is not null and doesn't contain NaN/zero values
@@ -70,11 +70,7 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
             !Array.from(queryEmbedding).every(v => v === 0) &&
             Array.from(queryEmbedding).every(v => !isNaN(v) && isFinite(v));
 
-          if (!isValidEmbedding) {
-            console.warn('Invalid query embedding generated, falling back to text search');
-            // Fall back to text search
-            searchSql = buildSearchQuery(query, currentPage);
-          } else {
+          if (isValidEmbedding) {
             searchSql = buildSemanticSearchQuery(
               query,
               queryEmbedding,
@@ -82,6 +78,10 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
               false,
               query.threshold
             );
+            usedSemanticSearch = true;
+          } else {
+            console.warn('Invalid query embedding generated, using text search');
+            searchSql = buildSearchQuery(query, currentPage);
           }
         } else {
           searchSql = buildSearchQuery(query, currentPage);
@@ -91,13 +91,13 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
         const searchResult = await conn.query(searchSql);
         const queryEnd = performance.now();
         addQuery(
-          searchMode === 'semantic' ? 'Semantic Search Query' : 'Search Query',
+          usedSemanticSearch ? 'Semantic Search Query' : 'Search Query',
           searchSql,
           queryEnd - queryStart
         );
 
         // Parse results
-        const records: MetadataRecord[] = [];
+        let records: MetadataRecord[] = [];
         for (let i = 0; i < searchResult.numRows; i++) {
           const record: Partial<MetadataRecord> = {};
           searchResult.schema.fields.forEach((field, idx) => {
@@ -108,20 +108,35 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
           records.push(record as MetadataRecord);
         }
 
-        // Get total count
+        // If semantic search returned no results, fall back to text search
+        if (usedSemanticSearch && records.length === 0) {
+          console.log('Semantic search returned no results, falling back to text search');
+          searchSql = buildSearchQuery(query, currentPage);
+
+          const fallbackQueryStart = performance.now();
+          const fallbackResult = await conn.query(searchSql);
+          const fallbackQueryEnd = performance.now();
+          addQuery('Text Search Query (fallback)', searchSql, fallbackQueryEnd - fallbackQueryStart);
+
+          records = [];
+          for (let i = 0; i < fallbackResult.numRows; i++) {
+            const record: Partial<MetadataRecord> = {};
+            fallbackResult.schema.fields.forEach((field, idx) => {
+              const value = fallbackResult.getChildAt(idx)?.get(i);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              record[field.name as keyof MetadataRecord] = value as any;
+            });
+            records.push(record as MetadataRecord);
+          }
+
+          usedSemanticSearch = false; // Update flag since we're now using text search
+        }
+
+        // Get total count using the same search mode that was actually used
         let countSql: string;
-        if (searchMode === 'semantic' && query.q && semanticSearchAvailable) {
+        if (usedSemanticSearch && query.q) {
           const queryEmbedding = generateEmbedding(query.q);
-
-          // Validate embedding
-          const isValidEmbedding = queryEmbedding &&
-            queryEmbedding.length > 0 &&
-            !Array.from(queryEmbedding).every(v => v === 0) &&
-            Array.from(queryEmbedding).every(v => !isNaN(v) && isFinite(v));
-
-          if (!isValidEmbedding) {
-            countSql = buildSearchQuery(query, currentPage, true);
-          } else {
+          if (queryEmbedding) {
             countSql = buildSemanticSearchQuery(
               query,
               queryEmbedding,
@@ -129,6 +144,8 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
               true,
               query.threshold
             );
+          } else {
+            countSql = buildSearchQuery(query, currentPage, true);
           }
         } else {
           countSql = buildSearchQuery(query, currentPage, true);
@@ -160,7 +177,7 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
     }
 
     executeSearch();
-  }, [conn, query, currentPage, onQueryTime, addQuery, clearQueries, searchMode, semanticSearchAvailable, generateEmbedding]);
+  }, [conn, query, currentPage, onQueryTime, addQuery, clearQueries, semanticSearchAvailable, generateEmbedding]);
 
   // Load facet data when a facet is expanded
   useEffect(() => {
@@ -172,9 +189,9 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
       if (facetsToLoad.length === 0) return;
 
       try {
-        // Generate query embedding for semantic search mode
+        // Generate query embedding for semantic search if available and query exists
         let queryEmbedding: Float32Array | null = null;
-        if (searchMode === 'semantic' && query.q && semanticSearchAvailable) {
+        if (semanticSearchAvailable && query.q) {
           queryEmbedding = generateEmbedding(query.q);
 
           // Validate embedding
@@ -233,7 +250,7 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
     }
 
     loadExpandedFacets();
-  }, [conn, query, expandedFacets, loadedFacets, addQuery, searchMode, semanticSearchAvailable, generateEmbedding]);
+  }, [conn, query, expandedFacets, loadedFacets, addQuery, semanticSearchAvailable, generateEmbedding]);
 
   function handleToggleFacet(field: string) {
     setExpandedFacets((prev) => ({
