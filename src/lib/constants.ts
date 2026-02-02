@@ -57,8 +57,9 @@ export const OSM_TILE_URL =
  */
 export const DEFAULT_MODEL_CONFIG = {
   tokenizerUrl: 'https://pul-tile-images.s3.us-east-1.amazonaws.com/tokenizer.json',
-  modelUrl: 'https://pul-tile-images.s3.us-east-1.amazonaws.com/model.safetensors',
+  embeddingsUrl: 'https://pul-tile-images.s3.us-east-1.amazonaws.com/embeddings.bin',
   embeddingDim: 128, // Default dimension, should match model
+  dtype: 'F32' as const, // Data type: F32 (float32) or F16 (float16)
 };
 
 /**
