@@ -14,7 +14,7 @@ export interface UseEmbeddingsResult {
   model: EmbeddingModel | null;
   isLoading: boolean;
   error: string | null;
-  generateEmbedding: (text: string) => Float32Array | null;
+  generateEmbedding: (text: string) => Promise<Float32Array | null>;
 }
 
 /**
@@ -62,15 +62,16 @@ export function useEmbeddings(
    * Generate an embedding for a query string
    * Returns null if model is not loaded
    * Memoized with useCallback to prevent unnecessary re-renders
+   * Uses HTTP range requests to fetch only needed token embeddings
    */
   const generateEmbedding = useCallback(
-    (text: string): Float32Array | null => {
+    async (text: string): Promise<Float32Array | null> => {
       if (!model) {
         return null;
       }
 
       try {
-        return generateQueryEmbedding(text, model);
+        return await generateQueryEmbedding(text, model);
       } catch (err) {
         console.error('Failed to generate embedding:', err);
         return null;

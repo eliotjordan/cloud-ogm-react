@@ -5,7 +5,7 @@ import { DEFAULT_MODEL_CONFIG } from '@/lib/constants';
  */
 export interface EmbeddingModelConfig {
   tokenizerUrl: string;
-  embeddingsUrl: string;
+  modelUrl: string;
   embeddingDim: number;
 }
 
@@ -17,11 +17,23 @@ export interface TokenVocab {
 }
 
 /**
- * Loaded embedding model with vocabulary and embedding matrix
+ * Tensor metadata from safetensors header
+ */
+interface TensorMetadata {
+  dtype: string;
+  shape: number[];
+  data_offsets: [number, number];
+}
+
+/**
+ * Loaded embedding model with vocabulary and tensor metadata
+ * Uses streaming to fetch embeddings on-demand via HTTP range requests
  */
 export interface EmbeddingModel {
   vocab: TokenVocab;
-  embeddings: Float32Array;
+  modelUrl: string;
+  headerLength: number;
+  tensorMetadata: TensorMetadata;
   embeddingDim: number;
 }
 
@@ -31,8 +43,160 @@ export interface EmbeddingModel {
 export { DEFAULT_MODEL_CONFIG };
 
 /**
+ * Convert Float16 (half precision) to Float32
+ * Float16 format: 1 sign bit, 5 exponent bits, 10 mantissa bits
+ */
+function float16ToFloat32(uint16: number): number {
+  const sign = (uint16 & 0x8000) >> 15;
+  const exponent = (uint16 & 0x7c00) >> 10;
+  const fraction = uint16 & 0x03ff;
+
+  // Handle special cases
+  if (exponent === 0) {
+    if (fraction === 0) {
+      return sign ? -0 : 0;
+    } else {
+      return (sign ? -1 : 1) * Math.pow(2, -14) * (fraction / 1024);
+    }
+  } else if (exponent === 0x1f) {
+    return fraction ? NaN : sign ? -Infinity : Infinity;
+  }
+
+  // Normal number
+  const float32Exponent = exponent - 15 + 127;
+  const float32Mantissa = fraction << 13;
+  const float32Bits = (sign << 31) | (float32Exponent << 23) | float32Mantissa;
+
+  const float32Array = new Float32Array(1);
+  const uint32Array = new Uint32Array(float32Array.buffer);
+  uint32Array[0] = float32Bits;
+
+  return float32Array[0];
+}
+
+/**
+ * Parse safetensors header to extract tensor metadata
+ */
+async function parseSafetensorsHeader(
+  modelUrl: string
+): Promise<{ headerLength: number; tensorMetadata: TensorMetadata }> {
+  // Fetch first 8 bytes to get header length
+  const headerLengthResponse = await fetch(modelUrl, {
+    headers: { Range: 'bytes=0-7' },
+  });
+
+  if (!headerLengthResponse.ok) {
+    throw new Error(`Failed to fetch header length: ${headerLengthResponse.statusText}`);
+  }
+
+  const headerLengthBuffer = await headerLengthResponse.arrayBuffer();
+  const view = new DataView(headerLengthBuffer);
+  const headerLengthLow = view.getUint32(0, true);
+  const headerLengthHigh = view.getUint32(4, true);
+
+  if (headerLengthHigh !== 0) {
+    throw new Error('Header length too large');
+  }
+
+  const headerLength = headerLengthLow;
+
+  // Fetch the JSON header
+  const headerResponse = await fetch(modelUrl, {
+    headers: { Range: `bytes=8-${8 + headerLength - 1}` },
+  });
+
+  if (!headerResponse.ok) {
+    throw new Error(`Failed to fetch header: ${headerResponse.statusText}`);
+  }
+
+  const headerBuffer = await headerResponse.arrayBuffer();
+  const headerText = new TextDecoder().decode(headerBuffer);
+  const header = JSON.parse(headerText);
+
+  console.log('Safetensors header:', header);
+
+  // Find embedding tensor
+  const possibleNames = [
+    'sentence_embedding.weight',
+    'embeddings.weight',
+    'embedding.weight',
+    'model.embed_tokens.weight',
+    'embeddings',
+  ];
+
+  let tensorMetadata: TensorMetadata | null = null;
+  let tensorName = '';
+
+  for (const name of possibleNames) {
+    if (header[name]) {
+      tensorMetadata = header[name];
+      tensorName = name;
+      break;
+    }
+  }
+
+  if (!tensorMetadata) {
+    const keys = Object.keys(header).filter(k => k !== '__metadata__');
+    if (keys.length === 0) {
+      throw new Error('No tensors found in safetensors file');
+    }
+    tensorName = keys[0];
+    tensorMetadata = header[tensorName];
+  }
+
+  console.log(`Using tensor: ${tensorName}`, tensorMetadata);
+
+  if (!tensorMetadata) {
+    throw new Error('Failed to find valid tensor metadata');
+  }
+
+  return { headerLength, tensorMetadata };
+}
+
+/**
+ * Fetch embeddings for specific token IDs using HTTP range requests
+ */
+async function fetchTokenEmbeddings(
+  tokenIds: number[],
+  model: EmbeddingModel
+): Promise<Float32Array[]> {
+  const bytesPerValue = model.tensorMetadata.dtype === 'F16' ? 2 : 4;
+  const tensorDataOffset = 8 + model.headerLength + model.tensorMetadata.data_offsets[0];
+
+  // Fetch embeddings in parallel
+  const embeddingPromises = tokenIds.map(async (tokenId) => {
+    const byteStart = tensorDataOffset + tokenId * model.embeddingDim * bytesPerValue;
+    const byteEnd = byteStart + model.embeddingDim * bytesPerValue - 1;
+
+    const response = await fetch(model.modelUrl, {
+      headers: { Range: `bytes=${byteStart}-${byteEnd}` },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch embedding for token ${tokenId}`);
+    }
+
+    const buffer = await response.arrayBuffer();
+
+    // Convert based on dtype
+    if (model.tensorMetadata.dtype === 'F16') {
+      const uint16Array = new Uint16Array(buffer);
+      const float32Array = new Float32Array(uint16Array.length);
+      for (let i = 0; i < uint16Array.length; i++) {
+        float32Array[i] = float16ToFloat32(uint16Array[i]);
+      }
+      return float32Array;
+    } else {
+      return new Float32Array(buffer);
+    }
+  });
+
+  return Promise.all(embeddingPromises);
+}
+
+/**
  * Load the embedding model from remote URLs
- * Downloads tokenizer.json and embeddings.bin files
+ * Downloads tokenizer.json and parses safetensors header (no full model download)
  */
 export async function loadEmbeddingModel(
   config: EmbeddingModelConfig = DEFAULT_MODEL_CONFIG
@@ -68,18 +232,21 @@ export async function loadEmbeddingModel(
     sampleTokens: Object.keys(vocab).slice(0, 20),
   });
 
-  // Load embedding matrix
-  const embeddingsResponse = await fetch(config.embeddingsUrl);
-  if (!embeddingsResponse.ok) {
-    throw new Error(`Failed to load embeddings: ${embeddingsResponse.statusText}`);
-  }
+  // Parse safetensors header (no full model download)
+  const { headerLength, tensorMetadata } = await parseSafetensorsHeader(config.modelUrl);
 
-  const buffer = await embeddingsResponse.arrayBuffer();
-  const embeddings = new Float32Array(buffer);
+  console.log('Model loaded (streaming mode):', {
+    vocabSize: Object.keys(vocab).length,
+    embeddingDim: config.embeddingDim,
+    dtype: tensorMetadata.dtype,
+    shape: tensorMetadata.shape,
+  });
 
   return {
     vocab,
-    embeddings,
+    modelUrl: config.modelUrl,
+    headerLength,
+    tensorMetadata,
     embeddingDim: config.embeddingDim,
   };
 }
@@ -116,11 +283,12 @@ export function tokenizeSentencePiece(text: string, vocab: TokenVocab): number[]
 /**
  * Generate an embedding vector for a query string
  * Uses mean pooling over token embeddings and L2 normalization
+ * Fetches embeddings on-demand via HTTP range requests
  */
-export function generateQueryEmbedding(
+export async function generateQueryEmbedding(
   text: string,
   model: EmbeddingModel
-): Float32Array {
+): Promise<Float32Array> {
   // Tokenize using SentencePiece-style tokenization
   const tokenIds = tokenizeSentencePiece(text, model.vocab);
 
@@ -136,28 +304,24 @@ export function generateQueryEmbedding(
     tokenIds: tokenIds.slice(0, 10),
   });
 
-  // Sum up embeddings for all tokens (mean pooling)
-  const sum = new Float32Array(model.embeddingDim);
-  let validTokenCount = 0;
+  // Fetch embeddings for tokens via HTTP range requests
+  const embeddings = await fetchTokenEmbeddings(tokenIds, model);
 
-  for (const tokenId of tokenIds) {
-    // Skip out-of-range IDs
-    if (tokenId < 0 || tokenId * model.embeddingDim >= model.embeddings.length) {
-      continue;
-    }
-
-    const offset = tokenId * model.embeddingDim;
-    for (let i = 0; i < model.embeddingDim; i++) {
-      sum[i] += model.embeddings[offset + i];
-    }
-    validTokenCount++;
-  }
-
-  // If no valid embeddings were found, return zero vector
-  if (validTokenCount === 0) {
+  if (embeddings.length === 0) {
     console.warn('No valid embeddings found for tokens:', tokenIds);
     return new Float32Array(model.embeddingDim);
   }
+
+  // Sum up embeddings for all tokens (mean pooling)
+  const sum = new Float32Array(model.embeddingDim);
+
+  for (const embedding of embeddings) {
+    for (let i = 0; i < model.embeddingDim; i++) {
+      sum[i] += embedding[i];
+    }
+  }
+
+  const validTokenCount = embeddings.length;
 
   // Average the embeddings
   for (let i = 0; i < model.embeddingDim; i++) {

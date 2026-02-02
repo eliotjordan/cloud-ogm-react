@@ -53,10 +53,11 @@ export const OSM_TILE_URL =
 /**
  * Default embedding model configuration
  * Model files stored in S3 for client-side semantic search
+ * Uses streaming with HTTP range requests to fetch only needed embeddings
  */
 export const DEFAULT_MODEL_CONFIG = {
   tokenizerUrl: 'https://pul-tile-images.s3.us-east-1.amazonaws.com/tokenizer.json',
-  embeddingsUrl: 'https://pul-tile-images.s3.us-east-1.amazonaws.com/embeddings.bin',
+  modelUrl: 'https://pul-tile-images.s3.us-east-1.amazonaws.com/model.safetensors',
   embeddingDim: 128, // Default dimension, should match model
 };
 
