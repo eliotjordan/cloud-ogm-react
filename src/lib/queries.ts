@@ -6,21 +6,19 @@ import { embeddingToSqlArray } from '@/utils/embeddings';
 import {
   MAX_FACET_VALUES,
   DEFAULT_SEMANTIC_SIMILARITY_THRESHOLD,
-  SHORT_QUERY_SIMILARITY_THRESHOLD,
-  SHORT_QUERY_LENGTH,
 } from '@/lib/constants';
 import { getFacetableFields, getCardFields } from '@/lib/fieldsConfig';
 
 /**
- * Calculate dynamic similarity threshold based on query characteristics
- * Shorter queries use stricter thresholds to avoid overly broad results
+ * Calculate similarity threshold for semantic search
+ * Returns user-specified threshold or default
  *
- * @param query - Search query text
+ * @param _query - Search query text (unused, kept for API compatibility)
  * @param userThreshold - Optional user-specified threshold override
  * @returns Similarity threshold value between 0 and 1
  */
 export function calculateSimilarityThreshold(
-  query: string,
+  _query: string,
   userThreshold?: number
 ): number {
   // If user specified a threshold, use it
@@ -28,12 +26,8 @@ export function calculateSimilarityThreshold(
     return userThreshold;
   }
 
-  // Dynamic threshold based on query length
-  // Shorter queries are often vague, so use stricter threshold
-  const queryLength = query.trim().length;
-  return queryLength < SHORT_QUERY_LENGTH
-    ? SHORT_QUERY_SIMILARITY_THRESHOLD
-    : DEFAULT_SEMANTIC_SIMILARITY_THRESHOLD;
+  // Use default threshold
+  return DEFAULT_SEMANTIC_SIMILARITY_THRESHOLD;
 }
 
 /**

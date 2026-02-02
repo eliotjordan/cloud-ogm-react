@@ -69,14 +69,3 @@ export const DEFAULT_MODEL_CONFIG = {
  * Typical threshold: 0.3-0.5 for general relevance
  */
 export const DEFAULT_SEMANTIC_SIMILARITY_THRESHOLD = 0.5;
-
-/**
- * Similarity threshold for short queries (< 10 characters)
- * Shorter queries are often vague, so use stricter threshold
- */
-export const SHORT_QUERY_SIMILARITY_THRESHOLD = 0.4;
-
-/**
- * Query length threshold for determining short vs normal queries
- */
-export const SHORT_QUERY_LENGTH = 10;
