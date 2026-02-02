@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.29.0",
-    "@samvera/clover-iiif": "^3.3.2",
+    "@samvera/clover-iiif": "github:eliotjordan/clover-iiif",
     "leaflet": "^1.9.4",
     "ol": "^10.7.0",
     "ol-pmtiles": "^2.0.2",
