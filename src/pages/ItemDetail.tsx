@@ -77,7 +77,9 @@ export function ItemDetail({ itemId, conn, onQueryTime }: ItemDetailProps) {
   if (isLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center py-12 text-gray-500">Loading...</div>
+        <div className="card p-12 text-center">
+          <p className="text-lg text-gray-600 dark:text-gray-400">Loading item details...</p>
+        </div>
       </div>
     );
   }

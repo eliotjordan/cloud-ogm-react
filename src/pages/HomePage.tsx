@@ -148,8 +148,8 @@ export function HomePage({ conn, onQueryTime }: HomePageProps) {
         </h2>
 
         {isLoadingClasses ? (
-          <div className="text-center py-12 text-gray-500">
-            Loading categories...
+          <div className="card p-12 text-center">
+            <p className="text-lg text-gray-600 dark:text-gray-400">Loading resource classes...</p>
           </div>
         ) : (
           <ResourceClassGrid
