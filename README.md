@@ -1,7 +1,6 @@
 # Cloud OpenGeoMetadata React
 
 [![CI](https://github.com/YOUR_USERNAME/cloud-ogm-react/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/cloud-ogm-react/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/YOUR_USERNAME/cloud-ogm-react/branch/main/graph/badge.svg)](https://codecov.io/gh/YOUR_USERNAME/cloud-ogm-react)
 
 A production-ready React + TypeScript application for searching and discovering geospatial metadata from institutions worldwide. Built with DuckDB-WASM for client-side SQL queries on Parquet data.
 
