@@ -61,9 +61,12 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Archive production build
-        uses: actions/upload-artifact@v4
+      - name: Upload app to R2
+        uses: ryand56/r2-upload-action@latest
+        if: github.ref == 'refs/heads/main'
         with:
-          name: dist
-          path: dist/
-          retention-days: 7
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: ${{ secrets.R2_BUCKET }}
+          source-dir: ./dist

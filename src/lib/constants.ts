@@ -3,7 +3,7 @@
  */
 
 export const PARQUET_URL =
-  'https://pul-tile-images.s3.us-east-1.amazonaws.com/cloud.parquet';
+  'https://ogm.cloudgbl.org/data/cloud.parquet';
 
 export const PAGE_SIZE = 10;
 
@@ -56,8 +56,8 @@ export const OSM_TILE_URL =
  * Uses streaming with HTTP range requests to fetch only needed embeddings
  */
 export const DEFAULT_MODEL_CONFIG = {
-  tokenizerUrl: 'https://pul-tile-images.s3.us-east-1.amazonaws.com/tokenizer.json',
-  embeddingsUrl: 'https://pul-tile-images.s3.us-east-1.amazonaws.com/embeddings.bin',
+  tokenizerUrl: 'https://ogm.cloudgbl.org/data/tokenizer.json',
+  embeddingsUrl: 'https://ogm.cloudgbl.org/data/embeddings.bin',
   embeddingDim: 128, // Default dimension, should match model
   dtype: 'F32' as const, // Data type: F32 (float32) or F16 (float16)
 };
@@ -68,4 +68,4 @@ export const DEFAULT_MODEL_CONFIG = {
  * Range: 0.0 (no similarity) to 1.0 (identical)
  * Typical threshold: 0.3-0.5 for general relevance
  */
-export const DEFAULT_SEMANTIC_SIMILARITY_THRESHOLD = 0.3;
+export const DEFAULT_SEMANTIC_SIMILARITY_THRESHOLD = 0.5;
