@@ -31,6 +31,44 @@ export function calculateSimilarityThreshold(
 }
 
 /**
+ * Build WHERE clauses for facet filters
+ * Dynamically handles all facetable fields from configuration
+ * @param params - Search parameters containing filter values
+ * @param excludeField - Optional field to exclude (used in facet queries)
+ * @returns Array of SQL WHERE clause strings
+ */
+function buildFacetFilterClauses(params: SearchParams, excludeField?: string): string[] {
+  const clauses: string[] = [];
+  const facetableFields = getFacetableFields();
+
+  facetableFields.forEach((fieldConfig) => {
+    const field = fieldConfig.field;
+
+    // Skip excluded field (used in facet queries to avoid filtering by own facet)
+    if (field === excludeField) return;
+
+    // Skip if no filter value provided
+    if (!params[field]) return;
+
+    const values = String(params[field]).split(',');
+    const escapedValues = values.map((v) => `'${escapeSqlString(v)}'`);
+
+    if (fieldConfig.isArray) {
+      // Array fields use list_contains
+      const conditions = escapedValues.map(
+        (v) => `list_contains(${field}, ${v})`
+      );
+      clauses.push(`(${conditions.join(' OR ')})`);
+    } else {
+      // Scalar fields use IN
+      clauses.push(`${field} IN (${escapedValues.join(', ')})`);
+    }
+  });
+
+  return clauses;
+}
+
+/**
  * Get list of fields needed for search queries
  * Combines facetable fields, card display fields, and essential fields
  */
@@ -83,33 +121,9 @@ export function buildSearchQuery(
     );
   }
 
-  // Facet filters
-  const facetFields = [
-    'location',
-    'provider',
-    'access_rights',
-    'resource_class',
-    'resource_type',
-    'theme',
-  ];
-
-  facetFields.forEach((field) => {
-    if (params[field]) {
-      const values = String(params[field]).split(',');
-      const escapedValues = values.map((v) => `'${escapeSqlString(v)}'`);
-
-      if (field === 'provider' || field === 'access_rights') {
-        // Scalar fields
-        whereClauses.push(`${field} IN (${escapedValues.join(', ')})`);
-      } else {
-        // Array fields
-        const conditions = escapedValues.map(
-          (v) => `list_contains(${field}, ${v})`
-        );
-        whereClauses.push(`(${conditions.join(' OR ')})`);
-      }
-    }
-  });
+  // Facet filters - dynamically built from field configuration
+  const facetFilterClauses = buildFacetFilterClauses(params);
+  whereClauses.push(...facetFilterClauses);
 
   const whereClause =
     whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
@@ -165,33 +179,9 @@ export function buildSemanticSearchQuery(
     );
   }
 
-  // Facet filters
-  const facetFields = [
-    'location',
-    'provider',
-    'access_rights',
-    'resource_class',
-    'resource_type',
-    'theme',
-  ];
-
-  facetFields.forEach((field) => {
-    if (params[field]) {
-      const values = String(params[field]).split(',');
-      const escapedValues = values.map((v) => `'${escapeSqlString(v)}'`);
-
-      if (field === 'provider' || field === 'access_rights') {
-        // Scalar fields
-        whereClauses.push(`${field} IN (${escapedValues.join(', ')})`);
-      } else {
-        // Array fields
-        const conditions = escapedValues.map(
-          (v) => `list_contains(${field}, ${v})`
-        );
-        whereClauses.push(`(${conditions.join(' OR ')})`);
-      }
-    }
-  });
+  // Facet filters - dynamically built from field configuration
+  const facetFilterClauses = buildFacetFilterClauses(params);
+  whereClauses.push(...facetFilterClauses);
 
   // Filter out documents without embeddings
   whereClauses.push('embeddings IS NOT NULL');
@@ -293,31 +283,8 @@ export function buildFacetQuery(
   }
 
   // Apply other facet filters (but not this facet's own filter)
-  const facetFields = [
-    'location',
-    'provider',
-    'access_rights',
-    'resource_class',
-    'resource_type',
-    'theme',
-  ];
-
-  facetFields.forEach((field) => {
-    if (field === facetConfig.field) return; // Skip own filter
-    if (!params[field]) return;
-
-    const values = String(params[field]).split(',');
-    const escapedValues = values.map((v) => `'${escapeSqlString(v)}'`);
-
-    if (field === 'provider' || field === 'access_rights') {
-      whereClauses.push(`${field} IN (${escapedValues.join(', ')})`);
-    } else {
-      const conditions = escapedValues.map(
-        (v) => `list_contains(${field}, ${v})`
-      );
-      whereClauses.push(`(${conditions.join(' OR ')})`);
-    }
-  });
+  const facetFilterClauses = buildFacetFilterClauses(params, facetConfig.field);
+  whereClauses.push(...facetFilterClauses);
 
   // Add embeddings filter for semantic search
   if (useSemanticFilter) {

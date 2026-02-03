@@ -135,6 +135,8 @@ describe('buildSearchQuery', () => {
       resource_class: 'Maps',
       resource_type: 'Image',
       theme: 'Transportation',
+      format: 'ArcGRID',
+      subject: 'Environment',
     };
     const sql = buildSearchQuery(params, 1);
 
@@ -143,10 +145,31 @@ describe('buildSearchQuery', () => {
     expect(sql).toContain('list_contains(resource_class,');
     expect(sql).toContain('list_contains(resource_type,');
     expect(sql).toContain('list_contains(theme,');
+    expect(sql).toContain('list_contains(subject,');
 
     // Scalar fields
     expect(sql).toContain('provider IN');
     expect(sql).toContain('access_rights IN');
+    expect(sql).toContain('format IN');
+  });
+
+  it('should handle format filter as scalar field', () => {
+    const params: SearchParams = { format: 'ArcGRID' };
+    const sql = buildSearchQuery(params, 1);
+
+    expect(sql).toContain('WHERE');
+    expect(sql).toContain('format IN');
+    expect(sql).toContain("'ArcGRID'");
+    expect(sql).not.toContain('list_contains');
+  });
+
+  it('should handle subject filter as array field', () => {
+    const params: SearchParams = { subject: 'Environment' };
+    const sql = buildSearchQuery(params, 1);
+
+    expect(sql).toContain('WHERE');
+    expect(sql).toContain('list_contains(subject,');
+    expect(sql).toContain("'Environment'");
   });
 
   it('should select required fields for search', () => {
