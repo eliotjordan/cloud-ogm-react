@@ -68,4 +68,4 @@ export const DEFAULT_MODEL_CONFIG = {
  * Range: 0.0 (no similarity) to 1.0 (identical)
  * Typical threshold: 0.3-0.5 for general relevance
  */
-export const DEFAULT_SEMANTIC_SIMILARITY_THRESHOLD = 0.5;
+export const DEFAULT_SEMANTIC_SIMILARITY_THRESHOLD = 0.4;
