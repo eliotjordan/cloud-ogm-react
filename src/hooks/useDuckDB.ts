@@ -43,6 +43,10 @@ export function useDuckDB() {
         await connection.query('LOAD httpfs');
         await connection.query('LOAD spatial');
 
+        // Tune HTTP settings for better performance with range requests
+        await connection.query('SET http_keep_alive=true');
+        await connection.query('SET http_retries=3');
+
         // Create view of Parquet file
         await connection.query(`
           CREATE VIEW parquet_data AS

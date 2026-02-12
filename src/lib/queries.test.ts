@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSearchQuery, buildFacetQuery, buildSemanticSearchQuery } from './queries';
+import { buildSearchQuery, buildFacetQuery, buildSemanticSearchQuery, buildItemDetailQuery } from './queries';
 import type { SearchParams, FieldConfig } from '@/types';
 
 describe('buildSearchQuery', () => {
@@ -183,10 +183,10 @@ describe('buildSearchQuery', () => {
     const params: SearchParams = {};
     const sql = buildSearchQuery(params, 1);
 
-    // Essential fields
+    // Essential fields (geometry excluded to reduce transfer size)
     expect(sql).toContain('id');
-    expect(sql).toContain('geometry');
     expect(sql).toContain('geojson');
+    expect(sql).not.toMatch(/\bgeometry\b/);
   });
 });
 
@@ -643,5 +643,26 @@ describe('buildFacetQuery - scalar fields', () => {
     expect(sql).toContain('SELECT provider as value');
     expect(sql).toContain('filtered_data');
     expect(sql).toContain('list_dot_product(embeddings,');
+  });
+});
+
+describe('buildItemDetailQuery', () => {
+  it('should select only item detail fields, excluding embeddings and geometry', () => {
+    const sql = buildItemDetailQuery('test-id-123');
+
+    expect(sql).toContain("WHERE id = 'test-id-123'");
+    expect(sql).toContain('LIMIT 1');
+    expect(sql).toContain('title');
+    expect(sql).toContain('geojson');
+    expect(sql).toContain('references');
+    expect(sql).toContain('description');
+    expect(sql).not.toContain('embeddings');
+    expect(sql).not.toMatch(/\bgeometry\b/);
+  });
+
+  it('should escape single quotes in item ID', () => {
+    const sql = buildItemDetailQuery("it's-a-test");
+
+    expect(sql).toContain("it''s-a-test");
   });
 });

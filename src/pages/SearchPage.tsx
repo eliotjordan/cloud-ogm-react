@@ -61,9 +61,10 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
         let searchSql: string;
         let usedSemanticSearch = false;
 
-        // Try semantic search first if available and we have a query
+        // Generate embedding once for reuse across search and count queries
+        let queryEmbedding: Float32Array | null = null;
         if (semanticSearchAvailable && query.q) {
-          const queryEmbedding = await generateEmbedding(query.q);
+          queryEmbedding = await generateEmbedding(query.q);
 
           // Validate embedding is not null and doesn't contain NaN/zero values
           const isValidEmbedding = queryEmbedding &&
@@ -71,19 +72,21 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
             !Array.from(queryEmbedding).every(v => v === 0) &&
             Array.from(queryEmbedding).every(v => !isNaN(v) && isFinite(v));
 
-          if (isValidEmbedding) {
-            searchSql = buildSemanticSearchQuery(
-              query,
-              queryEmbedding,
-              currentPage,
-              false,
-              query.threshold
-            );
-            usedSemanticSearch = true;
-          } else {
+          if (!isValidEmbedding) {
             console.warn('Invalid query embedding generated, using text search');
-            searchSql = buildSearchQuery(query, currentPage);
+            queryEmbedding = null;
           }
+        }
+
+        if (queryEmbedding) {
+          searchSql = buildSemanticSearchQuery(
+            query,
+            queryEmbedding,
+            currentPage,
+            false,
+            query.threshold
+          );
+          usedSemanticSearch = true;
         } else {
           searchSql = buildSearchQuery(query, currentPage);
         }
@@ -133,21 +136,16 @@ export function SearchPage({ conn, query, onQueryTime }: SearchPageProps) {
           usedSemanticSearch = false; // Update flag since we're now using text search
         }
 
-        // Get total count using the same search mode that was actually used
+        // Get total count using the same search mode and cached embedding
         let countSql: string;
-        if (usedSemanticSearch && query.q) {
-          const queryEmbedding = await generateEmbedding(query.q);
-          if (queryEmbedding) {
-            countSql = buildSemanticSearchQuery(
-              query,
-              queryEmbedding,
-              currentPage,
-              true,
-              query.threshold
-            );
-          } else {
-            countSql = buildSearchQuery(query, currentPage, true);
-          }
+        if (usedSemanticSearch && queryEmbedding) {
+          countSql = buildSemanticSearchQuery(
+            query,
+            queryEmbedding,
+            currentPage,
+            true,
+            query.threshold
+          );
         } else {
           countSql = buildSearchQuery(query, currentPage, true);
         }

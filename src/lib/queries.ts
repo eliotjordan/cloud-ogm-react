@@ -7,7 +7,7 @@ import {
   MAX_FACET_VALUES,
   DEFAULT_SEMANTIC_SIMILARITY_THRESHOLD,
 } from '@/lib/constants';
-import { getFacetableFields, getCardFields } from '@/lib/fieldsConfig';
+import { getFacetableFields, getCardFields, getItemFields } from '@/lib/fieldsConfig';
 
 /**
  * Calculate similarity threshold for semantic search
@@ -76,10 +76,9 @@ function getSearchFields(): string[] {
   const facetableFields = getFacetableFields().map(f => f.field);
   const cardFields = getCardFields().map(f => f.field);
 
-  // Combine and deduplicate
+  // Combine and deduplicate; geometry excluded since only geojson is used for rendering
   const allFields = new Set([
     'id',
-    'geometry',
     'geojson',
     ...facetableFields,
     ...cardFields,
@@ -312,7 +311,7 @@ export function buildFacetQuery(
     );
 
     fromClause = `(
-      SELECT *
+      SELECT ${facetConfig.field}
       FROM parquet_data
       ${whereClause}
       AND list_dot_product(embeddings, ${queryEmbeddingSql}) >= ${similarityThreshold}
@@ -357,4 +356,43 @@ export function buildFacetQuery(
       LIMIT ${MAX_FACET_VALUES}
     `;
   }
+}
+
+/**
+ * Get fields needed for item detail page.
+ * Excludes heavy columns (embeddings, geometry) that aren't rendered on the detail page.
+ */
+function getItemDetailFields(): string[] {
+  const itemFields = getItemFields().map(f => f.field);
+
+  const allFields = new Set([
+    'id',
+    'title',
+    'geojson',
+    'references',
+    'wxs_identifier',
+    ...itemFields,
+  ]);
+
+  return Array.from(allFields);
+}
+
+/**
+ * Build SQL query for fetching a single item by ID with column projection.
+ * Only selects columns used by the detail page, avoiding expensive columns
+ * like embeddings and geometry that would require large Parquet chunk downloads.
+ */
+export function buildItemDetailQuery(itemId: string): string {
+  const fields = getItemDetailFields();
+  const escapedId = escapeSqlString(itemId);
+
+  // Quote field names to avoid conflicts with SQL reserved words (e.g. "references")
+  const quotedFields = fields.map(f => `"${f}"`);
+
+  return `
+    SELECT ${quotedFields.join(', ')}
+    FROM parquet_data
+    WHERE id = '${escapedId}'
+    LIMIT 1
+  `;
 }
