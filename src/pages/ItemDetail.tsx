@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 import type { MetadataRecord } from '@/types';
+import { buildItemDetailQuery } from '@/lib/queries';
 import { parseReferences } from '@/utils/references';
 import { IIIFViewer } from '@/components/viewers/IIIFViewer';
 import { WMSViewer } from '@/components/viewers/WMSViewer';
@@ -33,12 +34,7 @@ export function ItemDetail({ itemId, conn, onQueryTime }: ItemDetailProps) {
         clearQueries(); // Clear previous queries
         const overallStart = performance.now();
 
-        const sql = `
-          SELECT *
-          FROM parquet_data
-          WHERE id = '${itemId.replace(/'/g, "''")}'
-          LIMIT 1
-        `;
+        const sql = buildItemDetailQuery(itemId);
         const queryStart = performance.now();
         const result = await conn.query(sql);
         const queryEnd = performance.now();
