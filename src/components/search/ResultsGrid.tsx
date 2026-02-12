@@ -1,7 +1,49 @@
+import { useState } from 'react';
 import type { MetadataRecord } from '@/types';
 import { navigate } from '@/lib/router';
 import { formatValue } from '@/utils/format';
 import { getResourceClassIcon } from '@/utils/icons';
+
+interface ResultThumbnailProps {
+  src: string;
+  resourceClass?: string[];
+}
+
+/**
+ * Thumbnail with fallback to resource class icon on load error
+ */
+function ResultThumbnail({ src, resourceClass }: ResultThumbnailProps) {
+  const [imageError, setImageError] = useState(false);
+
+  if (imageError) {
+    return <ResourceClassFallback resourceClass={resourceClass} />;
+  }
+
+  return (
+    <img
+      src={src}
+      alt=""
+      className="w-24 h-24 object-cover rounded border border-gray-200 dark:border-gray-700"
+      onError={() => setImageError(true)}
+    />
+  );
+}
+
+function ResourceClassFallback({ resourceClass }: { resourceClass?: string[] }) {
+  return (
+    <div className="w-24 h-24 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+      <svg
+        className="w-12 h-12 text-primary-600 dark:text-primary-400"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        {getResourceClassIcon(resourceClass)}
+      </svg>
+    </div>
+  );
+}
 
 interface ResultsGridProps {
   results: MetadataRecord[];
@@ -28,33 +70,10 @@ export function ResultsGrid({ results }: ResultsGridProps) {
             {/* Thumbnail or Icon */}
             <div className="flex-shrink-0">
               {result.thumbnail ? (
-                <img
-                  src={result.thumbnail}
-                  alt=""
-                  className="w-24 h-24 object-cover rounded border border-gray-200 dark:border-gray-700"
-                  onError={(e) => {
-                    // Hide broken image and show icon instead
-                    e.currentTarget.style.display = 'none';
-                    const iconContainer = e.currentTarget.nextElementSibling;
-                    if (iconContainer instanceof HTMLElement) {
-                      iconContainer.style.display = 'flex';
-                    }
-                  }}
-                />
-              ) : null}
-              <div
-                className={`w-24 h-24 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center ${result.thumbnail ? 'hidden' : 'flex'}`}
-              >
-                <svg
-                  className="w-12 h-12 text-primary-600 dark:text-primary-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  {getResourceClassIcon(result.resource_class)}
-                </svg>
-              </div>
+                <ResultThumbnail src={result.thumbnail} resourceClass={result.resource_class} />
+              ) : (
+                <ResourceClassFallback resourceClass={result.resource_class} />
+              )}
             </div>
 
             {/* Content */}

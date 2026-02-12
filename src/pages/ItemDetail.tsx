@@ -3,6 +3,7 @@ import type { AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 import type { MetadataRecord } from '@/types';
 import { buildItemDetailQuery } from '@/lib/queries';
 import { parseReferences } from '@/utils/references';
+import { parseResultRow } from '@/utils/duckdb';
 import { IIIFViewer } from '@/components/viewers/IIIFViewer';
 import { WMSViewer } from '@/components/viewers/WMSViewer';
 import { COGViewer } from '@/components/viewers/COGViewer';
@@ -43,19 +44,13 @@ export function ItemDetail({ itemId, conn, onQueryTime }: ItemDetailProps) {
         const overallEnd = performance.now();
         onQueryTime(overallEnd - overallStart);
 
-        if (result.numRows === 0) {
+        const record = parseResultRow<MetadataRecord>(result);
+        if (!record) {
           setError('Item not found');
           return;
         }
 
-        const record: Partial<MetadataRecord> = {};
-        result.schema.fields.forEach((field, idx) => {
-          const value = result.getChildAt(idx)?.get(0);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          record[field.name as keyof MetadataRecord] = value as any;
-        });
-
-        setItem(record as MetadataRecord);
+        setItem(record);
       } catch (err) {
         console.error('Failed to load item:', err);
         setError('Failed to load item details');

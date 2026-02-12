@@ -141,13 +141,6 @@ export async function loadEmbeddingModel(
     throw new Error('No vocabulary found in tokenizer.json');
   }
 
-  console.log('Model loaded (streaming mode):', {
-    vocabSize: Object.keys(vocab).length,
-    embeddingDim: config.embeddingDim,
-    dtype: config.dtype,
-    embeddingsUrl: config.embeddingsUrl,
-  });
-
   return {
     vocab,
     embeddingsUrl: config.embeddingsUrl,
@@ -202,12 +195,6 @@ export async function generateQueryEmbedding(
     // Return zero vector for empty input
     return new Float32Array(model.embeddingDim);
   }
-
-  console.log('Tokenization result:', {
-    text,
-    tokenCount: tokenIds.length,
-    tokenIds: tokenIds.slice(0, 10),
-  });
 
   // Fetch embeddings for tokens via HTTP range requests
   const embeddings = await fetchTokenEmbeddings(tokenIds, model);
@@ -283,6 +270,22 @@ export function normalizeVector(vector: Float32Array): Float32Array {
 export function embeddingToSqlArray(embedding: Float32Array): string {
   const values = Array.from(embedding).map((v) => v.toFixed(6));
   return `ARRAY[${values.join(', ')}]::FLOAT[]`;
+}
+
+/**
+ * Check whether an embedding is non-null, non-empty, contains no NaN/Infinity,
+ * and is not the zero vector. Useful for validating query embeddings before
+ * passing them to DuckDB similarity queries.
+ */
+export function isValidEmbedding(embedding: Float32Array | null): boolean {
+  if (!embedding || embedding.length === 0) return false;
+
+  let allZero = true;
+  for (let i = 0; i < embedding.length; i++) {
+    if (isNaN(embedding[i]) || !isFinite(embedding[i])) return false;
+    if (embedding[i] !== 0) allZero = false;
+  }
+  return !allZero;
 }
 
 /**

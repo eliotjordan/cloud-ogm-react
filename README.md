@@ -1,33 +1,22 @@
-# Cloud OpenGeoMetadata React
+# Cloud OpenGeoMetadata
 
-[![CI](https://github.com/YOUR_USERNAME/cloud-ogm-react/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/cloud-ogm-react/actions/workflows/ci.yml)
-
-A production-ready React + TypeScript application for searching and discovering geospatial metadata from institutions worldwide. Built with DuckDB-WASM for client-side SQL queries on Parquet data.
+A React application for searching and discovering geospatial metadata from institutions worldwide. Browse thousands of maps, datasets, imagery, and web services -- all queried client-side with no backend required.
 
 ## Features
 
-- **Client-side search**: DuckDB-WASM powers SQL queries directly in the browser
-- **Semantic search**: AI-powered search by meaning using distilled embeddings
-- **Geospatial discovery**: Interactive maps with Leaflet and OpenLayers
-- **Advanced filtering**: Faceted search with dynamic filter counts
-- **Multiple viewers**: IIIF, WMS, COG, and PMTiles support
-- **Fully typed**: Built with TypeScript for type safety
-- **Accessible**: WCAG compliant with axe-core validation
-- **Well tested**: Comprehensive unit, integration, and E2E tests
-
-## Tech Stack
-
-- **React 18** with TypeScript
-- **Vite** for build tooling
-- **Tailwind CSS** for styling
-- **DuckDB-WASM** for client-side analytics
-- **Custom tokenizer** for semantic search embeddings
-- **Leaflet & OpenLayers** for maps
-- **Vitest** for unit/integration tests
-- **Playwright** for E2E tests
-- **axe-core** for accessibility testing
+- **Full-text and semantic search** across geospatial metadata records
+- **Faceted filtering** by provider, resource class, theme, location, and more
+- **Interactive maps** with geographic bounding box search
+- **Multiple viewers** for IIIF manifests, WMS layers, Cloud Optimized GeoTIFFs, and PMTiles
+- **Client-side analytics** powered by DuckDB-WASM querying Parquet data over HTTP
+- **Accessible** interface with WCAG validation via axe-core
 
 ## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- npm
 
 ### Installation
 
@@ -35,7 +24,7 @@ A production-ready React + TypeScript application for searching and discovering 
 npm install
 ```
 
-### Development
+### Development Server
 
 ```bash
 npm run dev
@@ -43,112 +32,45 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-### Build
+## Architecture
 
-```bash
-npm run build
-npm run preview
-```
+The application runs entirely in the browser. DuckDB-WASM loads a remote Parquet file from S3 using HTTP range requests, executes SQL queries client-side, and returns results as Apache Arrow tables. A hash-based router (`/#/search`, `/#/item/{id}`) manages navigation with URL parameters as the source of truth for search state.
+
+Semantic search uses a distilled Model2Vec embedding model loaded on startup. Query embeddings are generated in the browser and compared against pre-computed document embeddings stored in the Parquet file using DuckDB's `list_dot_product()` function.
+
+See [CLAUDE.md](CLAUDE.md) for detailed architecture documentation.
 
 ## Testing
 
-### Unit & Integration Tests
+```bash
+npm test              # Unit tests (Vitest)
+npm run test:watch    # Watch mode
+npm run test:coverage # With coverage report
+
+npm run test:e2e      # E2E tests (Playwright, headless)
+npm run test:e2e:ui   # E2E tests (interactive UI)
+```
+
+## Building and Deployment
 
 ```bash
-npm test                # Run once
-npm run test:watch      # Watch mode
-npm run test:coverage   # With coverage report
+npm run build         # Production build (type checks + Vite)
+npm run preview       # Preview production build locally
 ```
 
-### End-to-End Tests
+### Hosting Requirements
 
-```bash
-npm run test:e2e        # Headless mode
-npm run test:e2e:ui     # Interactive UI
-npm run test:e2e:headed # Headed mode
-```
+The production build is a static site that can be served from any CDN or static hosting provider. Two requirements:
 
-### Type Checking
+1. **CORS headers for SharedArrayBuffer**: DuckDB-WASM requires `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` response headers. Without these, DuckDB will fail to initialize.
 
-```bash
-npm run type-check
-```
+2. **Data source access**: The application fetches a Parquet file and embedding model from S3 by default. To use a different data source, update the URLs in `src/lib/constants.ts`.
 
-### Linting
+## Tech Stack
 
-```bash
-npm run lint
-```
-
-## Continuous Integration
-
-This project uses GitHub Actions for continuous integration. The CI pipeline runs automatically on:
-- Push to `main` branch
-- Pull requests to `main` branch
-
-### CI Pipeline Steps
-
-1. **Lint**: Runs ESLint to check code quality
-2. **Type Check**: Validates TypeScript types
-3. **Test**: Runs unit tests with coverage (99%+ coverage)
-4. **Build**: Creates production build
-
-### Coverage Requirements
-
-The project maintains high test coverage standards:
-- **Statements**: 99%
-- **Branches**: 98%
-- **Functions**: 100%
-- **Lines**: 99%
-
-Coverage reports are automatically uploaded to Codecov and archived as artifacts.
-
-### Running CI Locally
-
-To run the same checks as CI before pushing:
-
-```bash
-npm run lint           # ESLint
-npm run type-check     # TypeScript
-npm run test:coverage  # Tests with coverage
-npm run build          # Production build
-```
-
-## Project Structure
-
-```
-src/
-├── components/       # React components
-├── hooks/           # Custom React hooks
-├── lib/             # Core libraries (DuckDB, routing)
-├── types/           # TypeScript type definitions
-├── utils/           # Utility functions
-├── test/            # Test setup and E2E tests
-└── styles/          # Global styles
-```
-
-## Architecture
-
-- **Hash-based routing**: Client-side navigation with URL state
-- **DuckDB-WASM**: Queries Parquet file from S3 on-demand
-- **Reactive state**: URL parameters drive search state
-- **Lazy viewers**: Map viewers initialized only when needed
-- **Memory management**: Proper cleanup to prevent leaks
-
-## Data Source
-
-Parquet file: `https://pul-tile-images.s3.us-east-1.amazonaws.com/cloud.parquet`
-
-The file contains geospatial metadata with fields for titles, descriptions, providers, geometries, and references to various web services (WMS, COG, PMTiles, IIIF).
-
-## Browser Support
-
-- Chrome/Edge (latest)
-- Firefox (latest)
-- Safari (latest)
-
-Requires SharedArrayBuffer support for DuckDB-WASM.
-
-## License
-
-Copyright © 2026 Cloud OpenGeoMetadata
+- React 18 with TypeScript
+- Vite for build tooling
+- Tailwind CSS for styling
+- DuckDB-WASM for client-side SQL
+- Leaflet and OpenLayers for maps
+- Vitest and Playwright for testing

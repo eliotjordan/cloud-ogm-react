@@ -10,15 +10,10 @@ import {
 import { getFacetableFields, getCardFields, getItemFields } from '@/lib/fieldsConfig';
 
 /**
- * Calculate similarity threshold for semantic search
- * Returns user-specified threshold or default
- *
- * @param _query - Search query text (unused, kept for API compatibility)
- * @param userThreshold - Optional user-specified threshold override
- * @returns Similarity threshold value between 0 and 1
+ * Calculate similarity threshold for semantic search.
+ * Returns user-specified threshold or default.
  */
 export function calculateSimilarityThreshold(
-  _query: string,
   userThreshold?: number
 ): number {
   // If user specified a threshold, use it
@@ -198,10 +193,7 @@ export function buildSemanticSearchQuery(
   if (countOnly) {
     // For semantic search, count only documents above a similarity threshold
     // This gives a more accurate count of "relevant" results
-    const similarityThreshold = calculateSimilarityThreshold(
-      params.q || '',
-      userThreshold
-    );
+    const similarityThreshold = calculateSimilarityThreshold(userThreshold);
 
     return `
       SELECT COUNT(*) FROM (
@@ -227,11 +219,7 @@ export function buildSemanticSearchQuery(
 
   const { limit, offset } = getPaginationSql(page);
 
-  // Similarity threshold to filter out irrelevant results
-  const similarityThreshold = calculateSimilarityThreshold(
-    params.q || '',
-    userThreshold
-  );
+  const similarityThreshold = calculateSimilarityThreshold(userThreshold);
 
   // Order by similarity (descending), then by bbox ratio if applicable
   const orderBy = hasBbox
@@ -305,10 +293,7 @@ export function buildFacetQuery(
   // For semantic search, wrap in a subquery that filters by similarity
   if (useSemanticFilter && queryEmbedding) {
     const queryEmbeddingSql = embeddingToSqlArray(queryEmbedding);
-    const similarityThreshold = calculateSimilarityThreshold(
-      params.q || '',
-      userThreshold
-    );
+    const similarityThreshold = calculateSimilarityThreshold(userThreshold);
 
     fromClause = `(
       SELECT ${facetConfig.field}

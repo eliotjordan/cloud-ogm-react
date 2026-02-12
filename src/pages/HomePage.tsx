@@ -50,7 +50,6 @@ export function HomePage({ conn, onQueryTime }: HomePageProps) {
           classes.push({
             name: result.getChildAt(0)?.get(i) as string,
             count: typeof countRaw === 'bigint' ? Number(countRaw) : countRaw as number,
-            icon: getResourceClassIcon(result.getChildAt(0)?.get(i) as string),
           });
         }
 
@@ -161,19 +160,4 @@ export function HomePage({ conn, onQueryTime }: HomePageProps) {
       </div>
     </div>
   );
-}
-
-/**
- * Get icon name for resource class
- */
-function getResourceClassIcon(className: string): string {
-  const icons: Record<string, string> = {
-    Maps: '🗺️',
-    Datasets: '📊',
-    Imagery: '🛰️',
-    'Web Services': '🌐',
-    Collections: '📚',
-    Websites: '💻',
-  };
-  return icons[className] || '🌍';
 }
