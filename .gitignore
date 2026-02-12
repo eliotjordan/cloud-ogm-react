@@ -32,3 +32,4 @@ playwright/.cache
 
 # LLM
 CLAUDE.md
+.claude/
