@@ -13,6 +13,13 @@ describe('buildSearchQuery', () => {
     expect(sql).toContain('OFFSET');
   });
 
+  it('should always filter out suppressed records', () => {
+    const params: SearchParams = {};
+    const sql = buildSearchQuery(params, 1);
+
+    expect(sql).toContain('suppressed IS NOT TRUE');
+  });
+
   it('should include text search filter', () => {
     const params: SearchParams = { q: 'test' };
     const sql = buildSearchQuery(params, 1);
@@ -184,6 +191,21 @@ describe('buildSearchQuery', () => {
 });
 
 describe('buildFacetQuery', () => {
+  it('should always filter out suppressed records', () => {
+    const facetConfig: FieldConfig = {
+      field: 'location',
+      label: 'Place',
+      isArray: true,
+      facetable: true,
+      displayOnCard: false,
+      displayOnItem: true,
+    };
+    const params: SearchParams = {};
+    const sql = buildFacetQuery(facetConfig, params);
+
+    expect(sql).toContain('suppressed IS NOT TRUE');
+  });
+
   it('should build facet query for array field', () => {
     const facetConfig: FieldConfig = {
       field: 'location',
@@ -312,7 +334,7 @@ describe('buildFacetQuery', () => {
     const sql = buildFacetQuery(facetConfig, params);
 
     // Should filter out NULL and empty values even with no user filters
-    expect(sql).toContain('WHERE unnested_value IS NOT NULL');
+    expect(sql).toContain('suppressed IS NOT TRUE AND unnested_value IS NOT NULL');
     expect(sql).toContain("unnested_value != ''");
     expect(sql).toContain('GROUP BY');
     expect(sql).toContain('ORDER BY');
@@ -409,6 +431,14 @@ describe('buildSemanticSearchQuery', () => {
     expect(sql).toContain('ORDER BY similarity DESC');
     expect(sql).toContain('LIMIT');
     expect(sql).toContain('OFFSET');
+  });
+
+  it('should always filter out suppressed records', () => {
+    const params: SearchParams = { q: 'test' };
+    const queryEmbedding = new Float32Array([0.1, 0.2, 0.3]);
+    const sql = buildSemanticSearchQuery(params, queryEmbedding, 1);
+
+    expect(sql).toContain('suppressed IS NOT TRUE');
   });
 
   it('should include bbox filter in semantic search', () => {
@@ -592,7 +622,7 @@ describe('buildFacetQuery - scalar fields', () => {
     const params: SearchParams = {};
     const sql = buildFacetQuery(facetConfig, params);
 
-    expect(sql).toContain('WHERE provider IS NOT NULL');
+    expect(sql).toContain('suppressed IS NOT TRUE AND provider IS NOT NULL');
     expect(sql).toContain("provider != ''");
     expect(sql).toContain('GROUP BY provider');
   });

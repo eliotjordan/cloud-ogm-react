@@ -98,6 +98,9 @@ export function buildSearchQuery(
 ): string {
   const whereClauses: string[] = [];
 
+  // Exclude suppressed records
+  whereClauses.push('suppressed IS NOT TRUE');
+
   // Check if we have a bbox for ratio calculation
   const bbox = params.bbox ? parseBbox(params.bbox) : null;
   const hasBbox = !!(bbox && isValidBbox(bbox));
@@ -125,8 +128,7 @@ export function buildSearchQuery(
   const facetFilterClauses = buildFacetFilterClauses(params);
   whereClauses.push(...facetFilterClauses);
 
-  const whereClause =
-    whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+  const whereClause = `WHERE ${whereClauses.join(' AND ')}`;
 
   if (countOnly) {
     return `SELECT COUNT(*) FROM parquet_data ${whereClause}`;
@@ -164,6 +166,9 @@ export function buildSemanticSearchQuery(
 ): string {
   const whereClauses: string[] = [];
 
+  // Exclude suppressed records
+  whereClauses.push('suppressed IS NOT TRUE');
+
   // Check if we have a bbox for ratio calculation
   const bbox = params.bbox ? parseBbox(params.bbox) : null;
   const hasBbox = !!(bbox && isValidBbox(bbox));
@@ -186,8 +191,7 @@ export function buildSemanticSearchQuery(
   // Filter out documents without embeddings
   whereClauses.push('embeddings IS NOT NULL');
 
-  const whereClause =
-    whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+  const whereClause = `WHERE ${whereClauses.join(' AND ')}`;
 
   // Convert query embedding to SQL array (needed for both count and results)
   const queryEmbeddingSql = embeddingToSqlArray(queryEmbedding);
@@ -260,6 +264,9 @@ export function buildFacetQuery(
 ): string {
   const whereClauses: string[] = [];
 
+  // Exclude suppressed records
+  whereClauses.push('suppressed IS NOT TRUE');
+
   // Apply same filters as main query (except the facet's own filter)
   // Only apply text search if not using semantic search
   if (params.q && !queryEmbedding) {
@@ -291,8 +298,7 @@ export function buildFacetQuery(
     whereClauses.push('embeddings IS NOT NULL');
   }
 
-  const whereClause =
-    whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+  const whereClause = `WHERE ${whereClauses.join(' AND ')}`;
 
   // Build base table source
   let fromClause = 'parquet_data';
