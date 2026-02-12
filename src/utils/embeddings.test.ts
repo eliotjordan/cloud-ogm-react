@@ -6,6 +6,7 @@ import {
   tokenizeSentencePiece,
   loadEmbeddingModel,
   generateQueryEmbedding,
+  isValidEmbedding,
 } from './embeddings';
 import type { EmbeddingModelConfig } from './embeddings';
 
@@ -534,5 +535,39 @@ describe('generateQueryEmbedding', () => {
     // Result should be normalized (even with very small values)
     const magnitude = Math.sqrt(result[0] * result[0] + result[1] * result[1]);
     expect(magnitude).toBeCloseTo(1.0);
+  });
+});
+
+describe('isValidEmbedding', () => {
+  it('should return true for a valid embedding', () => {
+    expect(isValidEmbedding(new Float32Array([0.1, 0.2, 0.3]))).toBe(true);
+  });
+
+  it('should return false for null', () => {
+    expect(isValidEmbedding(null)).toBe(false);
+  });
+
+  it('should return false for empty array', () => {
+    expect(isValidEmbedding(new Float32Array([]))).toBe(false);
+  });
+
+  it('should return false for all-zero vector', () => {
+    expect(isValidEmbedding(new Float32Array([0, 0, 0]))).toBe(false);
+  });
+
+  it('should return false when containing NaN', () => {
+    expect(isValidEmbedding(new Float32Array([1, NaN, 3]))).toBe(false);
+  });
+
+  it('should return false when containing Infinity', () => {
+    expect(isValidEmbedding(new Float32Array([1, Infinity]))).toBe(false);
+  });
+
+  it('should return false when containing -Infinity', () => {
+    expect(isValidEmbedding(new Float32Array([-Infinity, 1]))).toBe(false);
+  });
+
+  it('should return true when at least one value is non-zero', () => {
+    expect(isValidEmbedding(new Float32Array([0, 0, 0.001]))).toBe(true);
   });
 });

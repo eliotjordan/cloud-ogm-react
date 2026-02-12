@@ -151,5 +151,4 @@ export interface PaginationInfo {
 export interface ResourceClassInfo {
   name: string;
   count: number;
-  icon: string;
 }
