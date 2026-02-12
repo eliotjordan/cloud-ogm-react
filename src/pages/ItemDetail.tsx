@@ -127,25 +127,36 @@ export function ItemDetail({ itemId, conn, onQueryTime }: ItemDetailProps) {
         </h1>
       </div>
 
-      {/* Viewers */}
-      <div className="space-y-6 mb-8">
-        {refs?.iiifManifest ? (
-          <IIIFViewer iiifContent={refs.iiifManifest} />
-        ) : refs?.iiifImage ? (
-          <IIIFViewer iiifContent={refs.iiifImage} />
-        ) : null}
-        {refs?.wms && (
-          <WMSViewer
-            wmsUrl={refs.wms}
-            layerName={item.wxs_identifier}
-            geojson={item.geojson}
-          />
-        )}
-        {refs?.cog && <COGViewer cogUrl={refs.cog} geojson={item.geojson} />}
-        {refs?.pmtiles && (
-          <PMTilesViewer pmtilesUrl={refs.pmtiles} geojson={item.geojson} />
-        )}
-      </div>
+      {/* Viewers - hidden for restricted items */}
+      {item.access_rights?.toLowerCase() === 'restricted' ? (
+        <div className="card p-6 mb-8 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <p>This item has restricted access. The preview is not available.</p>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6 mb-8">
+          {refs?.iiifManifest ? (
+            <IIIFViewer iiifContent={refs.iiifManifest} />
+          ) : refs?.iiifImage ? (
+            <IIIFViewer iiifContent={refs.iiifImage} />
+          ) : null}
+          {refs?.wms && (
+            <WMSViewer
+              wmsUrl={refs.wms}
+              layerName={item.wxs_identifier}
+              geojson={item.geojson}
+            />
+          )}
+          {refs?.cog && <COGViewer cogUrl={refs.cog} geojson={item.geojson} />}
+          {refs?.pmtiles && (
+            <PMTilesViewer pmtilesUrl={refs.pmtiles} geojson={item.geojson} />
+          )}
+        </div>
+      )}
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
