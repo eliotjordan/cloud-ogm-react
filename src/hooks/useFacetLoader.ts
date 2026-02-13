@@ -41,11 +41,12 @@ export function useFacetLoader(
     setExpandedFacets(initialExpanded);
   }, [query]);
 
-  // Reset loaded facets when query changes so they reload with new filters
+  // Reset loaded facets when query changes or search mode changes (e.g., model loads)
+  // so they reload with the correct filters and semantic similarity
   useEffect(() => {
     setLoadedFacets({});
     setFacets({});
-  }, [query]);
+  }, [query, getQueryEmbedding]);
 
   // Load facet data when a facet is expanded
   useEffect(() => {

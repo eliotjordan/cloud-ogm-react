@@ -47,6 +47,8 @@ npm test              # Unit tests (Vitest)
 npm run test:watch    # Watch mode
 npm run test:coverage # With coverage report
 
+npm run lint          # Lint with eslint
+
 npm run test:e2e      # E2E tests (Playwright, headless)
 npm run test:e2e:ui   # E2E tests (interactive UI)
 ```

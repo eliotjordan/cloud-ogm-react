@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { AsyncDuckDBConnection } from '@duckdb/duckdb-wasm';
 import type { SearchParams, MetadataRecord } from '@/types';
 import { buildSearchQuery, buildSemanticSearchQuery } from '@/lib/queries';
@@ -38,17 +38,21 @@ export function useSearchExecution(
   /**
    * Generate a validated embedding for the given text.
    * Returns null when semantic search is unavailable or the embedding is invalid.
+   * Memoized so downstream hooks can use it as a stable effect dependency.
    */
-  async function getQueryEmbedding(text: string): Promise<Float32Array | null> {
-    if (!semanticSearchAvailable || !text) return null;
+  const getQueryEmbedding = useCallback(
+    async (text: string): Promise<Float32Array | null> => {
+      if (!semanticSearchAvailable || !text) return null;
 
-    const embedding = await generateEmbedding(text);
-    if (!isValidEmbedding(embedding)) {
-      console.warn('Invalid query embedding generated, using text search');
-      return null;
-    }
-    return embedding;
-  }
+      const embedding = await generateEmbedding(text);
+      if (!isValidEmbedding(embedding)) {
+        console.warn('Invalid query embedding generated, using text search');
+        return null;
+      }
+      return embedding;
+    },
+    [semanticSearchAvailable, generateEmbedding]
+  );
 
   useEffect(() => {
     async function executeSearch() {
@@ -135,8 +139,7 @@ export function useSearchExecution(
     }
 
     executeSearch();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conn, query, currentPage, onQueryTime, addQuery, clearQueries, semanticSearchAvailable, generateEmbedding]);
+  }, [conn, query, currentPage, onQueryTime, addQuery, clearQueries, getQueryEmbedding]);
 
   return { results, totalResults, isLoading, semanticSearchAvailable, getQueryEmbedding };
 }
