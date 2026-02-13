@@ -48,8 +48,11 @@ export function useFacetLoader(
     setFacets({});
   }, [query, getQueryEmbedding]);
 
-  // Load facet data when a facet is expanded
+  // Load facet data when a facet is expanded.
+  // Uses a stale flag to discard results from superseded runs.
   useEffect(() => {
+    let stale = false;
+
     async function loadExpandedFacets() {
       const facetsToLoad = facetsConfig.filter(
         (config) => expandedFacets[config.field] && !loadedFacets[config.field]
@@ -59,6 +62,7 @@ export function useFacetLoader(
 
       try {
         const queryEmbedding = await getQueryEmbedding(query.q || '');
+        if (stale) return;
 
         const facetPromises = facetsToLoad.map(async (facetConfig) => {
           const facetSql = buildFacetQuery(
@@ -85,6 +89,7 @@ export function useFacetLoader(
         });
 
         const facetResults = await Promise.all(facetPromises);
+        if (stale) return;
 
         setFacets((prev) => ({
           ...prev,
@@ -99,11 +104,17 @@ export function useFacetLoader(
           return newLoaded;
         });
       } catch (error) {
-        console.error('Error loading facets:', error);
+        if (!stale) {
+          console.error('Error loading facets:', error);
+        }
       }
     }
 
     loadExpandedFacets();
+
+    return () => {
+      stale = true;
+    };
   }, [conn, query, expandedFacets, loadedFacets, addQuery, getQueryEmbedding]);
 
   const handleToggleFacet = useCallback((field: string) => {
